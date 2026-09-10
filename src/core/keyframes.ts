@@ -54,7 +54,12 @@ function restore(trace: Trace, kf: Keyframe): FrameState {
   s.sorted.set(kf.sorted)
   s.counts = { ...kf.counts }
   s.index = kf.index
-  // pivot/range and the decay arrays rebuild themselves during the replay below.
+  s.pivot = kf.pivot
+  s.range = kf.range
+  // The decay arrays (lastCompare/lastWrite) rebuild themselves during the
+  // replay below. Anything they'd show as "never touched" from before this
+  // keyframe was already faded out at the keyframe's own index, since decay
+  // windows are far shorter than the keyframe interval.
   return s
 }
 
@@ -65,5 +70,7 @@ function snapshot(s: FrameState): Keyframe {
     aux: s.aux ? Float64Array.from(s.aux) : null,
     counts: { ...s.counts },
     sorted: Uint8Array.from(s.sorted),
+    pivot: s.pivot,
+    range: s.range,
   }
 }

@@ -10,6 +10,9 @@ export interface Keyframe {
   aux: Float64Array | null
   counts: Counts
   sorted: Uint8Array
+  /** -1 when no pivot was marked as of this keyframe. */
+  pivot: number
+  range: [number, number] | null
 }
 
 export interface Trace {
