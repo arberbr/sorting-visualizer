@@ -31,7 +31,13 @@ export function useRunner(createWorker: () => WorkerLike = defaultFactory) {
   if (workerRef.current === null) workerRef.current = createWorker()
 
   useEffect(() => {
-    const worker = workerRef.current!
+    // StrictMode double-invokes effects on mount in development (setup,
+    // cleanup, setup again) with no render in between, so the cleanup below
+    // can null the ref before this setup runs a second time. Recreate the
+    // worker here too rather than assuming the render-time guard above
+    // already did it.
+    if (workerRef.current === null) workerRef.current = createWorker()
+    const worker = workerRef.current
     const onMessage = (e: { data: RunResponse }) => {
       const resolve = pending.current.get(e.data.id)
       if (!resolve) return // a stale response from a superseded run
