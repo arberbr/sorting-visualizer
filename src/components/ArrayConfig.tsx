@@ -34,7 +34,8 @@ export default function ArrayConfig({ settings, busy, onChange, onRegenerate }: 
       </label>
       {settings.size > LARGE_N_WARNING && (
         <p className="config__warn">
-          Above {LARGE_N_WARNING} elements, quadratic algorithms may exceed the step limit.
+          Above {LARGE_N_WARNING} elements, traces take longer to compute and bars
+          become sub-pixel and hard to read.
         </p>
       )}
 

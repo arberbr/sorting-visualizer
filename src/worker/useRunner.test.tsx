@@ -86,4 +86,45 @@ describe('useRunner', () => {
     const live = created[created.length - 1]
     expect(live.sent).toHaveLength(1)
   })
+
+  it('does not leave busy wedged when its worker is torn down mid-request', async () => {
+    // A worker that accepts a message but never replies — a stand-in for a
+    // request whose worker gets terminated before it can answer, which is
+    // exactly what happens to whatever StrictMode's first effect pass sends:
+    // its cleanup terminates that worker before the second pass's worker
+    // takes over.
+    function silentWorker(): WorkerLike {
+      return {
+        postMessage() {},
+        terminate() {},
+        addEventListener() {},
+        removeEventListener() {},
+      }
+    }
+
+    // Dispatch exactly once, from an effect declared alongside useRunner so
+    // it rides the same StrictMode double-invoke cycle useRunner's own
+    // effect does — reproducing a request sent during the first, doomed
+    // setup. The ref guard keeps this to one dispatch (not two), isolating
+    // the orphaned-request case from a legitimately-still-outstanding one.
+    const { result } = renderHook(
+      () => {
+        const runner = useRunner(() => silentWorker())
+        const dispatched = React.useRef(false)
+        React.useEffect(() => {
+          if (dispatched.current) return
+          dispatched.current = true
+          void runner.run({ kind: 'builtin', algorithmId: 'bubble', input: [2, 1] })
+        }, [runner.run])
+        return runner
+      },
+      { wrapper: React.StrictMode },
+    )
+
+    // Without the fix this never resolves: the one request ever sent went to
+    // the worker StrictMode's synthetic cleanup terminates, its resolver is
+    // never called, and `busy` — which only clears once every pending
+    // resolver is gone — stays true forever.
+    await waitFor(() => expect(result.current.busy).toBe(false))
+  })
 })

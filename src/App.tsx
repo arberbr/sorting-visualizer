@@ -76,28 +76,40 @@ export default function App() {
 
   // Re-run whenever the algorithm or the input definition changes.
   //
-  // Debounced by DEBOUNCE_MS so a continuous drag on the size slider (many
-  // settings changes in quick succession) coalesces into one dispatch
-  // instead of one Worker round trip per intermediate value — each of
-  // which would otherwise reset the transport (usePlayer resets on every
-  // new trace) and flicker the canvas mid-drag.
+  // Leading-edge + trailing debounce: the first change after a quiet spell
+  // dispatches immediately (a discrete action — clicking an algorithm, the
+  // initial mount — is never held back), and any further changes that land
+  // within DEBOUNCE_MS of it coalesce into a single trailing dispatch at
+  // the end of that window instead of firing once per intermediate value
+  // (dragging the size slider fires one settings change per pixel; each
+  // would otherwise reset the transport, since usePlayer resets on every
+  // new trace, flickering the canvas mid-drag).
   //
-  // The same debounce incidentally fixes a StrictMode-only issue: it
-  // double-invokes this effect on mount (setup, cleanup, setup again)
-  // synchronously, with no render in between, and useRunner's own effect
-  // goes through the same cycle and its cleanup *terminates* the Worker it
-  // just created — so a request dispatched from the first setup is always
-  // sent to a Worker that's doomed to be killed before it can reply, and
-  // that request's promise then never resolves. Because useRunner's `busy`
-  // only flips back to false once every outstanding request has resolved,
-  // one permanently-orphaned request left "regenerate & run" permanently
-  // disabled. Cleanup here cancels the first setup's still-pending dispatch
-  // before the debounce timer ever fires, so only the second setup's
-  // dispatch — made once everything, including the Worker, has settled —
-  // actually reaches it.
+  // Correctness no longer depends on this debounce: useRunner's own effect
+  // cleanup now clears its pending-request map and resets `busy` whenever
+  // its Worker is torn down — including StrictMode's synthetic
+  // mount/cleanup/mount replay — so an orphaned request can no longer wedge
+  // `busy`. A leading dispatch and a trailing one can therefore legitimately
+  // both be in flight at once; `requestSeq` above discards whichever
+  // response isn't for the most recently dispatched request.
+  const inWindow = useRef(false)
+  const windowTimer = useRef<number | undefined>(undefined)
+
   useEffect(() => {
-    const timer = setTimeout(() => void start(algorithmId, settings), DEBOUNCE_MS)
-    return () => clearTimeout(timer)
+    if (!inWindow.current) {
+      inWindow.current = true
+      void start(algorithmId, settings)
+      windowTimer.current = window.setTimeout(() => {
+        inWindow.current = false
+      }, DEBOUNCE_MS)
+    } else {
+      clearTimeout(windowTimer.current)
+      windowTimer.current = window.setTimeout(() => {
+        inWindow.current = false
+        void start(algorithmId, settings)
+      }, DEBOUNCE_MS)
+    }
+    return () => clearTimeout(windowTimer.current)
   }, [algorithmId, settings, start])
 
   return (

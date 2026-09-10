@@ -50,6 +50,16 @@ export function useRunner(createWorker: () => WorkerLike = defaultFactory) {
       worker.removeEventListener('message', onMessage)
       worker.terminate()
       workerRef.current = null
+      // A terminated worker can never answer whatever requests are still
+      // outstanding — their resolvers would otherwise sit in `pending`
+      // forever, permanently wedging `busy` true. This fires on every real
+      // unmount too (harmless — nothing is left to observe it) and, in
+      // development, on StrictMode's synthetic cleanup between its two
+      // mount passes, which is the case that actually matters: a request
+      // dispatched during the first pass is always sent to a worker that's
+      // about to be replaced, and would otherwise never resolve.
+      pending.current.clear()
+      setBusy(false)
     }
   }, [])
 
