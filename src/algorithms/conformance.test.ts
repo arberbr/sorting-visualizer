@@ -88,26 +88,35 @@ describe('every registered algorithm', () => {
     // before the index it names actually holds that final value — this does
     // NOT require an algorithm to mark everything or to mark early; several
     // of these six legitimately mark only once at the very end.
-    it('never marks an index sorted before it holds its final value', () => {
-      if (tiny) return
-      const n = Math.min(40, algo.meta.maxN ?? 40)
-      const input = generate(n, 'random', 777)
-      const r = runSort(algo.sort, input)
-      expect(r.ok).toBe(true)
-      if (!r.ok) return
-      const expected = [...input].sort((x, y) => x - y)
-      const s = createInitialState(r.trace.input, r.trace.auxLength)
-      r.trace.steps.forEach((step, stepIndex) => {
-        applyStep(s, step)
-        if (step.t === 'mark' && step.kind === 'sorted') {
-          for (const i of step.indices) {
-            expect(
-              s.main[i],
-              `${algo.meta.id}: index ${i} was marked sorted at step ${stepIndex} but holds ${s.main[i]}, expected final value ${expected[i]}`,
-            ).toBe(expected[i])
+    //
+    // Stressed over 'random' plus two duplicate-heavy distributions: `generate`'s
+    // 'random' is a shuffled permutation of 1..n with no repeated values at all,
+    // so on its own this invariant was never exercised against duplicate handling
+    // — exactly what the non-comparison algorithms (counting, pigeonhole, ...)
+    // are built out of.
+    it.each(['random', 'few-unique', 'all-equal'] as const)(
+      'never marks an index sorted before it holds its final value (%s)',
+      (dist) => {
+        if (tiny) return
+        const n = Math.min(40, algo.meta.maxN ?? 40)
+        const input = generate(n, dist, 777)
+        const r = runSort(algo.sort, input)
+        expect(r.ok).toBe(true)
+        if (!r.ok) return
+        const expected = [...input].sort((x, y) => x - y)
+        const s = createInitialState(r.trace.input, r.trace.auxLength)
+        r.trace.steps.forEach((step, stepIndex) => {
+          applyStep(s, step)
+          if (step.t === 'mark' && step.kind === 'sorted') {
+            for (const i of step.indices) {
+              expect(
+                s.main[i],
+                `${algo.meta.id}: index ${i} was marked sorted at step ${stepIndex} but holds ${s.main[i]}, expected final value ${expected[i]}`,
+              ).toBe(expected[i])
+            }
           }
-        }
-      })
-    })
+        })
+      },
+    )
   })
 })
