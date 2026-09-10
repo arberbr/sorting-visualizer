@@ -45,4 +45,16 @@ function sort(arr) {
     expect(c.error.code).toBe('runtime')
     expect(c.error.message).toContain('top level boom')
   })
+
+  it('pins the current best-effort line for a syntax error on this engine', () => {
+    const c = compileCustom('function sort(arr) { if ( }')
+    expect(c.ok).toBe(false)
+    if (c.ok) return
+    // On V8, a SyntaxError thrown by the Function constructor carries no
+    // `<anonymous>:N:M` position in its stack — just `at new Function
+    // (<anonymous>)` — so there is nothing to extract or correct. `line`
+    // stays undefined rather than a guess. If this ever starts returning a
+    // number, WRAPPER_LINE_OFFSET is already applied to it — update this test.
+    expect(c.error.line).toBeUndefined()
+  })
 })

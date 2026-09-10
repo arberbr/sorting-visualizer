@@ -48,4 +48,40 @@ describe('execute', () => {
     if (r.ok) return
     expect(r.error.code).toBe('step-budget')
   })
+
+  it('reports the exact line a multi-line custom sort throws on', () => {
+    const source = [
+      'function sort(arr) {',
+      '  const x = 1',
+      '  const y = 2',
+      "  throw new Error('boom')",
+      '}',
+    ].join('\n')
+    const r = execute({ id: 5, kind: 'custom', source, input: [1, 2] })
+    expect(r.ok).toBe(false)
+    if (r.ok) return
+    // Four lines make an off-by-two unmistakable: a naive raw report would be 6.
+    expect(r.error.line).toBe(4)
+  })
+
+  it('reports line 1, never 0 or negative, when the first line throws', () => {
+    const r = execute({
+      id: 6,
+      kind: 'custom',
+      source: "function sort(arr) { throw new Error('boom') }",
+      input: [1, 2],
+    })
+    expect(r.ok).toBe(false)
+    if (r.ok) return
+    expect(r.error.line).toBe(1)
+  })
+
+  it("leaves a built-in run's error untouched by the wrapper-offset correction", () => {
+    const r = execute({ id: 7, kind: 'builtin', algorithmId: 'nope', input: [1] })
+    expect(r.ok).toBe(false)
+    if (r.ok) return
+    // Built-ins are never dynamically compiled, so there is never a wrapper
+    // line to correct for — this must stay undefined, not a shifted number.
+    expect(r.error.line).toBeUndefined()
+  })
 })
