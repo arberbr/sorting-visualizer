@@ -1,3 +1,4 @@
+import { buildKeyframes } from './keyframes'
 import { Budget, DEFAULT_LIMITS, LimitError, type Limits } from './limits'
 import { TrackedArray } from './trackedArray'
 import { checkSorted } from './verify'
@@ -91,7 +92,7 @@ export function runSort(
       steps: arr.steps,
       auxLength: arr.auxLength,
       counts: arr.counts,
-      keyframes: [],
+      keyframes: buildKeyframes(input, arr.steps, arr.auxLength),
     },
     finalArray,
     sorted,
