@@ -73,3 +73,106 @@ describe('runSort keyframes', () => {
     expect(trace.keyframes[0].index).toBe(0)
   })
 })
+
+/**
+ * Recursive merge sort that exercises every Step variant and every
+ * FrameState field: markRange/markPivot before each merge, markSorted and
+ * clearMarks after, and an aux buffer (allocated once) for the actual
+ * merging — unlike `bubble` above, which never touches pivot, range, or aux.
+ */
+const mergeSortWithMarks = (a: TrackedArray) => {
+  const aux = a.alloc(a.length)
+  const go = (lo: number, hi: number): void => {
+    if (hi - lo <= 1) return
+    const mid = (lo + hi) >> 1
+    a.markRange(lo, hi - 1)
+    a.markPivot(mid)
+    go(lo, mid)
+    go(mid, hi)
+    for (let i = lo; i < hi; i++) aux.set(i, a.get(i))
+    let i = lo
+    let j = mid
+    let k = lo
+    while (i < mid && j < hi) {
+      if (aux.compare(i, j) <= 0) a.set(k++, aux.get(i++))
+      else a.set(k++, aux.get(j++))
+    }
+    while (i < mid) a.set(k++, aux.get(i++))
+    while (j < hi) a.set(k++, aux.get(j++))
+    a.clearMarks()
+    a.markSorted(...Array.from({ length: hi - lo }, (_, x) => lo + x))
+  }
+  go(0, a.length)
+}
+
+const mergeTraceOf = (n: number) => {
+  const input = Array.from({ length: n }, (_, i) => (i * 7919) % n)
+  const r = runSort(mergeSortWithMarks, input)
+  if (!r.ok) throw new Error('run failed')
+  return r.trace
+}
+
+describe('stateAt (full FrameState parity across keyframe boundaries)', () => {
+  it('matches a linear replay on every field, at and around keyframe boundaries', () => {
+    // n=400 comfortably clears 5000 steps for merge sort's O(n log n) work,
+    // and its aux buffer, pivot, and range marks are all exercised.
+    const trace = mergeTraceOf(400)
+    expect(trace.steps.length).toBeGreaterThanOrEqual(5000)
+    expect(trace.auxLength).toBeGreaterThan(0)
+
+    // 1999/2000/2001 and 3999/4000/4001 straddle the real default
+    // KEYFRAME_INTERVAL (2000) used here via runSort/buildKeyframes.
+    const picks = [
+      0,
+      1,
+      1999,
+      2000,
+      2001,
+      3999,
+      4000,
+      4001,
+      Math.floor(trace.steps.length / 2),
+      trace.steps.length,
+    ]
+
+    for (const index of picks) {
+      const i = Math.min(index, trace.steps.length)
+      const fast = stateAt(trace, i)
+      const slow = linearStateAt(trace, i)
+
+      expect(Array.from(fast.main)).toEqual(Array.from(slow.main))
+      expect(fast.aux).not.toBeNull()
+      expect(slow.aux).not.toBeNull()
+      expect(Array.from(fast.aux!)).toEqual(Array.from(slow.aux!))
+      expect(Array.from(fast.sorted)).toEqual(Array.from(slow.sorted))
+      expect(fast.pivot).toBe(slow.pivot)
+      expect(fast.range).toEqual(slow.range)
+      expect(Array.from(fast.lastCompare)).toEqual(Array.from(slow.lastCompare))
+      expect(Array.from(fast.lastWrite)).toEqual(Array.from(slow.lastWrite))
+      expect(fast.counts).toEqual(slow.counts)
+      expect(fast.index).toBe(i)
+    }
+  })
+
+  it('also holds with a small custom keyframe interval', () => {
+    const trace = mergeTraceOf(120)
+    const withTightKeyframes = { ...trace, keyframes: buildKeyframes(trace.input, trace.steps, trace.auxLength, 37) }
+    const picks = [0, 1, 36, 37, 38, 73, 74, 75, Math.floor(trace.steps.length / 2), trace.steps.length]
+
+    for (const index of picks) {
+      const i = Math.min(index, trace.steps.length)
+      const fast = stateAt(withTightKeyframes, i)
+      const slow = linearStateAt(trace, i)
+
+      expect(Array.from(fast.main)).toEqual(Array.from(slow.main))
+      expect(Array.from(fast.aux!)).toEqual(Array.from(slow.aux!))
+      expect(Array.from(fast.sorted)).toEqual(Array.from(slow.sorted))
+      expect(fast.pivot).toBe(slow.pivot)
+      expect(fast.range).toEqual(slow.range)
+      expect(Array.from(fast.lastCompare)).toEqual(Array.from(slow.lastCompare))
+      expect(Array.from(fast.lastWrite)).toEqual(Array.from(slow.lastWrite))
+      expect(fast.counts).toEqual(slow.counts)
+      expect(fast.index).toBe(i)
+    }
+  })
+})

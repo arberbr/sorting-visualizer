@@ -13,6 +13,8 @@ export interface Keyframe {
   /** -1 when no pivot was marked as of this keyframe. */
   pivot: number
   range: [number, number] | null
+  lastCompare: Int32Array
+  lastWrite: Int32Array
 }
 
 export interface Trace {

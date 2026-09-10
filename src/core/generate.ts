@@ -50,7 +50,7 @@ export function generate(n: number, dist: Distribution, seed: number): number[] 
       return ascending.reverse()
 
     case 'nearly-sorted': {
-      const out = ascending
+      const out = ascending.slice()
       const swaps = Math.max(1, Math.round(n * 0.05))
       for (let k = 0; k < swaps; k++) {
         const i = Math.floor(rng() * (n - 1))
@@ -90,7 +90,7 @@ export function generate(n: number, dist: Distribution, seed: number): number[] 
       return new Array(n).fill(Math.ceil(n / 2))
 
     case 'single-outlier': {
-      const out = ascending
+      const out = ascending.slice()
       const from = Math.floor(rng() * (n - 1))
       const [v] = out.splice(from, 1)
       const to = from < n / 2 ? n - 1 : 0
