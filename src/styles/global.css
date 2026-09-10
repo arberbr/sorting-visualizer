@@ -1,0 +1,163 @@
+@import './tokens.css';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Numbers are mono and tabular so climbing counters never shift the layout. */
+.mono,
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--c-muted);
+}
+
+.panel {
+  background: var(--c-surface);
+  border: var(--hairline);
+  border-radius: var(--radius);
+}
+
+button {
+  font: inherit;
+  color: var(--c-text);
+  background: var(--c-surface-alt);
+  border: var(--hairline);
+  border-radius: var(--radius);
+  height: var(--control-height);
+  padding: 0 var(--space-3);
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--c-accent);
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+button[aria-pressed='true'] {
+  border-color: var(--c-accent);
+  color: var(--c-accent);
+}
+
+select,
+input[type='number'],
+input[type='text'] {
+  font-family: var(--font-mono);
+  font-size: var(--fs-small);
+  color: var(--c-text);
+  background: var(--c-bg);
+  border: var(--hairline);
+  border-radius: var(--radius);
+  height: var(--control-height);
+  padding: 0 var(--space-2);
+}
+
+input[type='range'] {
+  accent-color: var(--c-accent);
+  width: 100%;
+}
+
+:focus-visible {
+  outline: 2px solid var(--c-accent);
+  outline-offset: 1px;
+}
+
+/* The app shell: a fixed left rail, the stage, and a right inspector. */
+.app {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr) 320px;
+  grid-template-rows: 48px minmax(0, 1fr) auto;
+  grid-template-areas:
+    'head head head'
+    'rail stage inspector'
+    'rail controls inspector';
+  height: 100%;
+}
+
+.app__head {
+  grid-area: head;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 0 var(--space-4);
+  border-bottom: var(--hairline);
+}
+
+.app__rail {
+  grid-area: rail;
+  overflow-y: auto;
+  border-right: var(--hairline);
+}
+
+.app__stage {
+  grid-area: stage;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+}
+
+.app__controls {
+  grid-area: controls;
+  border-top: var(--hairline);
+  padding: var(--space-3) var(--space-4);
+}
+
+.app__inspector {
+  grid-area: inspector;
+  overflow-y: auto;
+  border-left: var(--hairline);
+}
+
+.wordmark {
+  font-family: var(--font-mono);
+  font-size: var(--fs-lead);
+  letter-spacing: -0.02em;
+}
+
+.wordmark span {
+  color: var(--c-accent);
+}
+
+@media (max-width: 1100px) {
+  .app {
+    grid-template-columns: 220px minmax(0, 1fr);
+    grid-template-areas:
+      'head head'
+      'rail stage'
+      'rail controls'
+      'inspector inspector';
+  }
+
+  .app__inspector {
+    border-left: none;
+    border-top: var(--hairline);
+  }
+}

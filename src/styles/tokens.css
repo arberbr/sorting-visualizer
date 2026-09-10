@@ -1,0 +1,25 @@
+:root {
+  /* Colors are injected by applyTheme() as --c-* at startup. */
+
+  --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', 'Consolas', monospace;
+
+  --fs-micro: 10px;
+  --fs-small: 11px;
+  --fs-body: 13px;
+  --fs-lead: 15px;
+  --fs-display: 22px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  --radius: 4px;
+  --hairline: 1px solid var(--c-hairline);
+
+  --track-height: 3px;
+  --control-height: 30px;
+}
