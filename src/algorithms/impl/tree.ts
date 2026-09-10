@@ -16,6 +16,12 @@ export const meta: AlgorithmMeta = {
 }
 
 interface Node {
+  /** The value's original array position — insertion compares by this, since no
+   *  writes happen until the traversal phase, so it still holds its original value. */
+  index: number
+  /** The value itself, captured once at insertion time so the write-back phase
+   *  never has to re-read a main-array slot that an earlier write may have
+   *  already overwritten. */
   value: number
   left: Node | null
   right: Node | null
@@ -26,15 +32,15 @@ export function sort(a: TrackedArray): void {
 
   let root: Node | null = null
 
-  const insert = (value: number) => {
-    const node: Node = { value, left: null, right: null }
+  const insert = (index: number, value: number) => {
+    const node: Node = { index, value, left: null, right: null }
     if (!root) {
       root = node
       return
     }
     let cur = root
     for (;;) {
-      if (value < cur.value) {
+      if (a.compare(index, cur.index) < 0) {
         if (!cur.left) {
           cur.left = node
           return
@@ -50,7 +56,7 @@ export function sort(a: TrackedArray): void {
     }
   }
 
-  for (let i = 0; i < a.length; i++) insert(a.get(i))
+  for (let i = 0; i < a.length; i++) insert(i, a.get(i))
 
   let k = 0
   const stack: Node[] = []

@@ -12,7 +12,7 @@ export const meta: AlgorithmMeta = {
   stable: true,
   inPlace: false,
   description:
-    'Counting sort shifted by the minimum value, so the holes span only the range actually present. Fast when the value range is close to the element count, hopeless when it is not. Requires integer values.',
+    'Counting sort shifted by the minimum value, so the holes span only the range actually present. Fast when the value range is close to the element count, hopeless when it is not — its aux buffer is sized by max minus min, not by n. Requires integer values.',
 }
 
 export function sort(a: TrackedArray): void {

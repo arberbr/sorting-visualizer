@@ -12,7 +12,7 @@ export const meta: AlgorithmMeta = {
   stable: true,
   inPlace: false,
   description:
-    'Counts how many times each value occurs, then writes the values back in order. It never compares two elements at all, so the n log n lower bound simply does not apply. Requires non-negative integer values.',
+    'Counts how many times each value occurs, then writes the values back in order. It never compares two elements at all, so the n log n lower bound simply does not apply. Requires non-negative integer values, and a value range comparable to the element count — its aux buffer is sized by the largest value, not by n.',
 }
 
 export function sort(a: TrackedArray): void {

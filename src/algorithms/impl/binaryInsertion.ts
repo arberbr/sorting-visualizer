@@ -17,12 +17,16 @@ export const meta: AlgorithmMeta = {
 
 export function sort(a: TrackedArray): void {
   for (let i = 1; i < a.length; i++) {
-    const key = a.get(i)
+    // Compare directly against index i rather than a value pulled out of it:
+    // the binary search below only reads positions strictly left of i (mid < i),
+    // and the shift that moves element i happens after the search concludes, so
+    // index i still holds its own value for the whole search — and the compare
+    // is then a real TrackedArray comparison instead of an off-array read.
     let lo = 0
     let hi = i
     while (lo < hi) {
       const mid = (lo + hi) >> 1
-      if (a.compareValue(mid, key) <= 0) lo = mid + 1
+      if (a.compare(mid, i) <= 0) lo = mid + 1
       else hi = mid
     }
     for (let j = i; j > lo; j--) a.swap(j - 1, j)

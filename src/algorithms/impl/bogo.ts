@@ -12,22 +12,23 @@ export const meta: AlgorithmMeta = {
   stable: false,
   inPlace: true,
   description:
-    'Shuffles the array and checks whether it happens to be sorted, forever. Included as the reference point for what a bad algorithm actually looks like. Capped at 8 elements, and it will still take a while.',
-  maxN: 8,
+    'Shuffles the array and checks whether it happens to be sorted, forever. Included as the reference point for what a bad algorithm actually looks like. Capped at 7 elements, and it will still take a while.',
+  maxN: 7,
 }
 
 export function sort(a: TrackedArray): void {
   // A fixed seed keeps runs reproducible, so the same array always animates the same way.
+  // Full-period Park-Miller (Lehmer) generator: modulus 2^31-1 (2147483647, prime),
+  // multiplier 48271. The product of two values below 2^31 stays well under 2^53,
+  // so plain float arithmetic is exact here — no truncation, no precision loss.
+  // (An earlier version used Math.imul, which truncates its inputs to 32 bits
+  // BEFORE the modulus is applied; that silently breaks the full-period
+  // construction and collapsed the generator's actual cycle down to ~79,000
+  // states instead of the intended ~2.1 billion.)
   let seed = 0x2f6e2b1
   const rnd = () => {
-    // Math.imul returns a signed 32-bit result, so the product can be negative;
-    // `% 0x7fffffff` then keeps that sign, and a plain `>>> 0` would reinterpret
-    // a small negative remainder as a huge unsigned one, pushing rnd() past 1
-    // and producing an out-of-range swap index. Shift negative remainders back
-    // into range instead.
-    seed = Math.imul(seed, 48271) % 0x7fffffff
-    if (seed < 0) seed += 0x7fffffff
-    return seed / 0x7fffffff
+    seed = (seed * 48271) % 2147483647
+    return seed / 2147483647
   }
 
   const isSorted = () => {

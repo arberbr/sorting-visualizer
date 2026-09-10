@@ -9,6 +9,9 @@ const FIXTURES: ReadonlyArray<{ name: string; input: number[] }> = [
   { name: 'single', input: [1] },
   { name: 'pair sorted', input: [1, 2] },
   { name: 'pair reversed', input: [2, 1] },
+  // Small enough to still be covered by algorithms capped at maxN 7 (bogo) —
+  // without this, a maxN:7 algorithm would only ever be exercised on 0-2 elements.
+  { name: 'reversed (7)', input: [7, 6, 5, 4, 3, 2, 1] },
   { name: 'all equal', input: [4, 4, 4, 4, 4, 4, 4, 4] },
   { name: 'duplicate heavy', input: [3, 1, 3, 2, 1, 2, 3, 1, 2, 3] },
   { name: 'already sorted', input: [1, 2, 3, 4, 5, 6, 7, 8] },
@@ -118,5 +121,42 @@ describe('every registered algorithm', () => {
         })
       },
     )
+
+    // The counters shown in the UI are a claim about what the algorithm
+    // actually did. `non-comparison` algorithms (counting, radix, bucket,
+    // pigeonhole) are legitimately exempt — they read values instead of
+    // comparing them, and `bucket` sorts within its buckets on plain values
+    // by design. Every other algorithm's whole story is comparisons, so
+    // reporting zero of them on non-trivial input would be a factual error
+    // on screen, not a quirk of implementation.
+    //
+    // KNOWN PRE-EXISTING GAP (discovered while adding this assertion, out of
+    // scope for this fix round — flagged, not silently swallowed): cycle,
+    // quick-three-way and quick-hoare compare via `a.compareValue(i, v)`
+    // against a value that has been deliberately detached from any single
+    // live array index — a pivot slot that the partition loop itself may
+    // swap, or a cycle-sort item mid-displacement with no index of its own —
+    // so converting them to an index/index `a.compare` the way tree.ts and
+    // binaryInsertion.ts were fixed would risk real correctness bugs in
+    // already-shipped, previously-reviewed code. `compareValue` only ever
+    // records a `read`, never increments `compares` (verified empirically),
+    // so these three structurally cannot pass this assertion without a wider
+    // TrackedArray/Step change. Excluded here pending that decision.
+    const COMPARE_VALUE_ONLY_GAP = new Set(['cycle', 'quick-three-way', 'quick-hoare'])
+
+    it('records at least one comparison on non-trivial input', () => {
+      if (algo.meta.family === 'non-comparison') return
+      if (COMPARE_VALUE_ONLY_GAP.has(algo.meta.id)) return
+      const n = Math.min(8, algo.meta.maxN ?? 8)
+      // Deliberately not `generate()` here: generate() refuses n below its
+      // own MIN_N (8), which would exclude algorithms capped tighter than
+      // that (bogo, maxN 7). A plain reversed run is non-trivial input for
+      // every algorithm this test applies to.
+      const input = Array.from({ length: n }, (_, i) => n - i)
+      const r = runSort(algo.sort, input)
+      expect(r.ok).toBe(true)
+      if (!r.ok) return
+      expect(r.trace.counts.compares, algo.meta.id).toBeGreaterThan(0)
+    })
   })
 })
