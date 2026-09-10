@@ -128,25 +128,14 @@ describe('every registered algorithm', () => {
     // comparing them, and `bucket` sorts within its buckets on plain values
     // by design. Every other algorithm's whole story is comparisons, so
     // reporting zero of them on non-trivial input would be a factual error
-    // on screen, not a quirk of implementation.
-    //
-    // KNOWN PRE-EXISTING GAP (discovered while adding this assertion, out of
-    // scope for this fix round — flagged, not silently swallowed): cycle,
-    // quick-three-way and quick-hoare compare via `a.compareValue(i, v)`
-    // against a value that has been deliberately detached from any single
-    // live array index — a pivot slot that the partition loop itself may
-    // swap, or a cycle-sort item mid-displacement with no index of its own —
-    // so converting them to an index/index `a.compare` the way tree.ts and
-    // binaryInsertion.ts were fixed would risk real correctness bugs in
-    // already-shipped, previously-reviewed code. `compareValue` only ever
-    // records a `read`, never increments `compares` (verified empirically),
-    // so these three structurally cannot pass this assertion without a wider
-    // TrackedArray/Step change. Excluded here pending that decision.
-    const COMPARE_VALUE_ONLY_GAP = new Set(['cycle', 'quick-three-way', 'quick-hoare'])
-
+    // on screen, not a quirk of implementation. No further exceptions: this
+    // is only self-enforcing if nothing can opt out. `compareValue` now
+    // records its own comparison (see TrackedArray.compareValue /
+    // Step['compare-value']), so algorithms that legitimately compare
+    // against a detached value (cycle, quick-three-way, quick-hoare) no
+    // longer need — or get — a carve-out.
     it('records at least one comparison on non-trivial input', () => {
       if (algo.meta.family === 'non-comparison') return
-      if (COMPARE_VALUE_ONLY_GAP.has(algo.meta.id)) return
       const n = Math.min(8, algo.meta.maxN ?? 8)
       // Deliberately not `generate()` here: generate() refuses n below its
       // own MIN_N (8), which would exclude algorithms capped tighter than

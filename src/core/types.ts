@@ -9,6 +9,7 @@ export type Step =
   | { t: 'read'; lane: Lane; i: number }
   | { t: 'write'; lane: Lane; i: number; value: number }
   | { t: 'compare'; lane: Lane; i: number; j: number; result: -1 | 0 | 1 }
+  | { t: 'compare-value'; lane: Lane; i: number; value: number; result: -1 | 0 | 1 }
   | { t: 'swap'; lane: Lane; i: number; j: number }
   | { t: 'mark'; kind: MarkKind; indices: number[] }
 

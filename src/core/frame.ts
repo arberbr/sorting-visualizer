@@ -55,6 +55,10 @@ export function applyStep(s: FrameState, step: Step): void {
         s.lastCompare[step.j] = at
       }
       break
+    case 'compare-value':
+      s.counts.compares++
+      if (step.lane === 0) s.lastCompare[step.i] = at
+      break
     case 'swap': {
       s.counts.swaps++
       if (step.lane === 0) {

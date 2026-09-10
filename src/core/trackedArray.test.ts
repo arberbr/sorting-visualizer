@@ -36,7 +36,13 @@ describe('TrackedArray', () => {
   it('compareValue compares an element against a loose value', () => {
     const a = new TrackedArray([3], budget())
     expect(a.compareValue(0, 10)).toBe(-1)
-    expect(a.steps).toEqual([{ t: 'read', lane: 0, i: 0 }])
+    expect(a.steps).toEqual([{ t: 'compare-value', lane: 0, i: 0, value: 10, result: -1 }])
+  })
+
+  it('compareValue counts as a comparison, not a read', () => {
+    const a = new TrackedArray([3], budget())
+    a.compareValue(0, 10)
+    expect(a.counts).toEqual({ reads: 0, writes: 0, compares: 1, swaps: 0 })
   })
 
   it('swap exchanges elements and records a single swap step', () => {

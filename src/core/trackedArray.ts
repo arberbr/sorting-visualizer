@@ -68,7 +68,11 @@ export class TrackedArray {
 
   /** Compares element i against a value held outside the array. */
   compareValue(i: number, v: number): -1 | 0 | 1 {
-    return sign(this.get(i) - v)
+    this.bounds(i, this.length)
+    const result = sign(this.data[i] - v)
+    this.record({ t: 'compare-value', lane: 0, i, value: v, result })
+    this.counters.compares++
+    return result
   }
 
   swap(i: number, j: number): void {

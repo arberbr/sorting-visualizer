@@ -41,6 +41,14 @@ describe('applyStep', () => {
     expect(s.lastCompare[1]).toBe(0)
   })
 
+  it('records a compare-value against its one index without changing data', () => {
+    const s = state()
+    applyStep(s, { t: 'compare-value', lane: 0, i: 1, value: 10, result: -1 })
+    expect(Array.from(s.main)).toEqual([5, 3, 8])
+    expect(s.counts.compares).toBe(1)
+    expect(s.lastCompare[1]).toBe(0)
+  })
+
   it('applies aux-lane writes to the aux buffer only', () => {
     const s = createInitialState([1, 2], 2)
     applyStep(s, { t: 'write', lane: 1, i: 0, value: 7 })
