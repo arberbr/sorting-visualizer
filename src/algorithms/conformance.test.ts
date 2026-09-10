@@ -28,6 +28,14 @@ describe('every registered algorithm', () => {
       expect(a.meta.name, a.meta.id).not.toBe('')
       expect(a.meta.description.length, a.meta.id).toBeGreaterThan(20)
       expect(a.source, a.meta.id).toContain('function sort')
+      // Guards the convention extractSortSource relies on: `sort` must be the
+      // last thing in the file, so nothing declared after it leaks into the
+      // code panel (Task 17). A trailing helper would break this.
+      const sourceLines = a.source.split('\n').filter((line) => line.trim() !== '')
+      expect(
+        sourceLines[sourceLines.length - 1]?.trim(),
+        `${a.meta.id}: source should end with '}' as its last non-empty line — a declaration after sort() would leak into the code panel`,
+      ).toBe('}')
       for (const key of ['best', 'average', 'worst', 'space'] as const) {
         expect(a.meta[key], `${a.meta.id}.${key}`).toMatch(/O\(/)
       }
@@ -73,6 +81,33 @@ describe('every registered algorithm', () => {
       for (const step of r.trace.steps) applyStep(s, step)
       expect(Array.from(s.main)).toEqual(r.finalArray)
       expect(s.counts).toEqual(r.trace.counts)
+    })
+
+    // The "confirmed sorted" region the UI shows the user is a claim: this
+    // index is in its final position. A mark step is never allowed to fire
+    // before the index it names actually holds that final value — this does
+    // NOT require an algorithm to mark everything or to mark early; several
+    // of these six legitimately mark only once at the very end.
+    it('never marks an index sorted before it holds its final value', () => {
+      if (tiny) return
+      const n = Math.min(40, algo.meta.maxN ?? 40)
+      const input = generate(n, 'random', 777)
+      const r = runSort(algo.sort, input)
+      expect(r.ok).toBe(true)
+      if (!r.ok) return
+      const expected = [...input].sort((x, y) => x - y)
+      const s = createInitialState(r.trace.input, r.trace.auxLength)
+      r.trace.steps.forEach((step, stepIndex) => {
+        applyStep(s, step)
+        if (step.t === 'mark' && step.kind === 'sorted') {
+          for (const i of step.indices) {
+            expect(
+              s.main[i],
+              `${algo.meta.id}: index ${i} was marked sorted at step ${stepIndex} but holds ${s.main[i]}, expected final value ${expected[i]}`,
+            ).toBe(expected[i])
+          }
+        }
+      })
     })
   })
 })
