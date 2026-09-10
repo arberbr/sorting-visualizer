@@ -90,4 +90,69 @@ describe('runSort', () => {
     if (r.ok) return
     expect(r.error.code).toBe('not-a-function')
   })
+
+  it('rejects an async sort function instead of resolving with a premature snapshot', () => {
+    // async functions are assignable to SortFn thanks to TS's void-return
+    // special-casing, so ordinary user code can hand us one with no cast.
+    const asyncSort: (a: TrackedArray) => void = async (a) => {
+      await Promise.resolve()
+      a.swap(0, 1)
+    }
+    const r = runSort(asyncSort, [3, 1, 2])
+    expect(r.ok).toBe(false)
+    if (r.ok) return
+    expect(r.error.code).toBe('runtime')
+    expect(r.error.message).toMatch(/promise|synchronous/i)
+  })
+
+  it('does not leak an unhandled rejection when an async sort function rejects later', async () => {
+    const asyncSort: (a: TrackedArray) => void = async () => {
+      await Promise.resolve()
+      throw new Error('async boom')
+    }
+    const r = runSort(asyncSort, [3, 1, 2])
+    expect(r.ok).toBe(false)
+    // Give the rejection a macrotask to surface. If runSort didn't attach a
+    // handler to the returned promise, vitest fails this run with an
+    // "Unhandled Rejection" error even though no assertion below fails.
+    await new Promise((resolve) => setTimeout(resolve, 0))
+  })
+
+  it('reports runtime for a non-Error thrown string', () => {
+    const r = runSort(() => {
+      throw 'a string'
+    }, [1, 2])
+    expect(r.ok).toBe(false)
+    if (r.ok) return
+    expect(r.error.code).toBe('runtime')
+    expect(r.error.message).toBeTruthy()
+  })
+
+  it('reports runtime for a thrown null', () => {
+    const r = runSort(() => {
+      throw null
+    }, [1, 2])
+    expect(r.ok).toBe(false)
+    if (r.ok) return
+    expect(r.error.code).toBe('runtime')
+    expect(r.error.message).toBeTruthy()
+  })
+
+  it('reports runtime for a thrown plain object', () => {
+    const r = runSort(() => {
+      throw { weird: true }
+    }, [1, 2])
+    expect(r.ok).toBe(false)
+    if (r.ok) return
+    expect(r.error.code).toBe('runtime')
+    expect(r.error.message).toBeTruthy()
+  })
+
+  it('treats an empty input array as already sorted', () => {
+    const r = runSort(bubble, [])
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.sorted).toBe(true)
+    expect(r.firstUnsorted).toBe(-1)
+  })
 })

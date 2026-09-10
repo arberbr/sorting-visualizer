@@ -49,15 +49,35 @@ export function runSort(
   const arr = new TrackedArray(input, new Budget(limits))
 
   try {
-    sortFn(arr)
+    const result: unknown = sortFn(arr)
+    if (isThenable(result)) {
+      // A later rejection has nowhere left to go once we've already returned
+      // a RunError below — attach a no-op handler so it can't surface as an
+      // unhandled rejection outside runSort's control.
+      result.then(
+        () => {},
+        () => {},
+      )
+      return {
+        ok: false,
+        error: {
+          code: 'runtime',
+          message:
+            'sort() must be synchronous — it returned a Promise. Remove async/await; every operation is recorded as it happens.',
+        },
+      }
+    }
   } catch (e) {
     if (e instanceof LimitError) {
       return { ok: false, error: { code: e.kind, message: e.message, limit: e.limit } }
     }
-    const err = e as Error
     return {
       ok: false,
-      error: { code: 'runtime', message: err?.message ?? String(e), line: lineOf(err) },
+      error: {
+        code: 'runtime',
+        message: messageOf(e),
+        line: e instanceof Error ? lineOf(e) : undefined,
+      },
     }
   }
 
@@ -83,4 +103,24 @@ export function runSort(
 function lineOf(err: Error): number | undefined {
   const m = /<anonymous>:(\d+):\d+/.exec(err?.stack ?? '')
   return m ? Number(m[1]) : undefined
+}
+
+/** True for anything with a callable `.then`, i.e. a Promise or Promise-like. */
+function isThenable(value: unknown): value is PromiseLike<unknown> {
+  return (
+    (typeof value === 'object' || typeof value === 'function') &&
+    value !== null &&
+    typeof (value as { then?: unknown }).then === 'function'
+  )
+}
+
+/** A readable, always-non-empty message for a value thrown by user code. */
+function messageOf(e: unknown): string {
+  if (e instanceof Error) return e.message
+  if (typeof e === 'string') return e
+  try {
+    return JSON.stringify(e) ?? String(e)
+  } catch {
+    return String(e)
+  }
 }
