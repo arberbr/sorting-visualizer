@@ -127,4 +127,96 @@ describe('useRunner', () => {
     // resolver is gone — stays true forever.
     await waitFor(() => expect(result.current.busy).toBe(false))
   })
+
+  describe('watchdog', () => {
+    /**
+     * A worker that accepts every message and genuinely never replies — the
+     * stand-in for a real Worker stuck spinning inside `new Function(...)`
+     * user code that never calls a TrackedArray method (a bare
+     * `while (true) {}`), so `Budget.tick()` — the only place the worker-side
+     * time/step budget is enforced — is never reached.
+     *
+     * Tests below use a tiny real `limits.maxMillis` (the watchdog's own
+     * grace period is fixed, so real elapsed time is still ~1s) rather than
+     * vi.useFakeTimers(): faking timers here fights React Testing Library's
+     * own act()/scheduler internals and deadlocks instead of settling.
+     */
+    function hangingWorker(): WorkerLike & { terminated: boolean } {
+      return {
+        terminated: false,
+        postMessage() {},
+        terminate() {
+          this.terminated = true
+        },
+        addEventListener() {},
+        removeEventListener() {},
+      }
+    }
+
+    it('resolves with a timeout error when the worker never replies', async () => {
+      const worker = hangingWorker()
+      const { result } = renderHook(() => useRunner(() => worker))
+
+      let out: Awaited<ReturnType<typeof result.current.run>> | undefined
+      await act(async () => {
+        out = await result.current.run({
+          kind: 'custom',
+          source: 'x',
+          input: [2, 1],
+          limits: { maxMillis: 20, maxSteps: 1000 },
+        })
+      })
+
+      expect(out?.ok).toBe(false)
+      if (out && !out.ok) {
+        expect(out.error.code).toBe('timeout')
+      }
+      expect(worker.terminated).toBe(true)
+      expect(result.current.busy).toBe(false)
+    })
+
+    it('replaces the wedged worker so a subsequent run succeeds', async () => {
+      const hung = hangingWorker()
+      let calls = 0
+      const createWorker = () => (++calls === 1 ? hung : fakeWorker())
+      const { result } = renderHook(() => useRunner(createWorker))
+
+      await act(async () => {
+        await result.current.run({
+          kind: 'custom',
+          source: 'x',
+          input: [2, 1],
+          limits: { maxMillis: 20, maxSteps: 1000 },
+        })
+      })
+
+      let second: Awaited<ReturnType<typeof result.current.run>> | undefined
+      await act(async () => {
+        second = await result.current.run({ kind: 'builtin', algorithmId: 'bubble', input: [2, 1] })
+      })
+      expect(second?.ok).toBe(true)
+    })
+
+    it('does not fire the watchdog for a request that answers normally', async () => {
+      const worker = fakeWorker()
+      const { result } = renderHook(() => useRunner(() => worker))
+      let out: Awaited<ReturnType<typeof result.current.run>> | undefined
+      await act(async () => {
+        out = await result.current.run({
+          kind: 'builtin',
+          algorithmId: 'bubble',
+          input: [2, 1],
+          limits: { maxMillis: 20, maxSteps: 1000 },
+        })
+      })
+      expect(out?.ok).toBe(true)
+      // Wait past what this request's watchdog window would have been; the
+      // stray timer firing after an already-resolved request must be a
+      // harmless no-op, not a crash or a retroactive failure.
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 1100))
+      })
+      expect(result.current.busy).toBe(false)
+    })
+  })
 })

@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import AlgorithmPicker from './components/AlgorithmPicker'
+import ApiReference from './components/ApiReference'
 import ArrayConfig, { type ArraySettings } from './components/ArrayConfig'
 import Canvas from './components/Canvas'
+import CodePanel from './components/CodePanel'
 import Controls from './components/Controls'
 import ErrorBanner from './components/ErrorBanner'
 import Telemetry from './components/Telemetry'
 import { getAlgorithm } from './algorithms'
+import { loadDraft, saveDraft } from './customCode'
 import { generate } from './core/generate'
 import type { RunError, Trace } from './core/runner'
 import { usePlayer } from './player/usePlayer'
@@ -28,6 +31,12 @@ export default function App() {
   const [trace, setTrace] = useState<Trace | null>(null)
   const [sorted, setSorted] = useState(true)
   const [error, setError] = useState<RunError | null>(null)
+  const [mode, setMode] = useState<'builtin' | 'custom'>('builtin')
+  const [source, setSource] = useState(() => loadDraft())
+
+  useEffect(() => {
+    saveDraft(source)
+  }, [source])
 
   const { run, busy } = useRunner()
   const player = usePlayer(trace)
@@ -74,6 +83,32 @@ export default function App() {
     [run],
   )
 
+  // Mirrors `start` above: same shared `requestSeq` counter (so a late
+  // custom response can't clobber a newer builtin run or vice versa), same
+  // never-throws contract for generate()'s RangeError.
+  const runCustom = useCallback(async () => {
+    const seq = ++requestSeq.current
+    let input: number[]
+    try {
+      input = generate(Math.max(8, settings.size), settings.distribution, settings.seed)
+    } catch (e) {
+      if (seq !== requestSeq.current) return
+      setError({ code: 'runtime', message: e instanceof Error ? e.message : String(e) })
+      setTrace(null)
+      return
+    }
+    const result = await run({ kind: 'custom', source, input })
+    if (seq !== requestSeq.current) return // superseded by a later run
+    if (result.ok) {
+      setError(null)
+      setSorted(result.sorted)
+      setTrace(result.trace)
+    } else {
+      setError(result.error)
+      setTrace(null)
+    }
+  }, [run, settings, source])
+
   // Re-run whenever the algorithm or the input definition changes.
   //
   // Leading-edge + trailing debounce: the first change after a quiet spell
@@ -92,10 +127,20 @@ export default function App() {
   // `busy`. A leading dispatch and a trailing one can therefore legitimately
   // both be in flight at once; `requestSeq` above discards whichever
   // response isn't for the most recently dispatched request.
+  //
+  // Guarded to only fire in 'builtin' mode: in 'custom' mode, re-running
+  // arbitrary user code on every settings tweak (a slider drag, a seed bump)
+  // isn't something to do implicitly — the user decides when to spend cycles
+  // running their own code, via the Run button. `mode` is still a dependency
+  // here (not just an inline check) so that switching *back* from 'custom'
+  // to 'builtin' immediately refreshes the trace — otherwise the canvas and
+  // telemetry would keep showing the custom run's result under the builtin
+  // algorithm's name until some other setting happened to change.
   const inWindow = useRef(false)
   const windowTimer = useRef<number | undefined>(undefined)
 
   useEffect(() => {
+    if (mode !== 'builtin') return
     if (!inWindow.current) {
       inWindow.current = true
       void start(algorithmId, settings)
@@ -110,7 +155,7 @@ export default function App() {
       }, DEBOUNCE_MS)
     }
     return () => clearTimeout(windowTimer.current)
-  }, [algorithmId, settings, start])
+  }, [mode, algorithmId, settings, start])
 
   return (
     <div className="app">
@@ -119,6 +164,14 @@ export default function App() {
           sort<span>.</span>
         </div>
         <div className="label">algorithm visualizer</div>
+        <div className="mode">
+          <button aria-pressed={mode === 'builtin'} onClick={() => setMode('builtin')}>
+            library
+          </button>
+          <button aria-pressed={mode === 'custom'} onClick={() => setMode('custom')}>
+            your code
+          </button>
+        </div>
       </header>
 
       <nav className="app__rail" aria-label="Algorithms">
@@ -128,12 +181,23 @@ export default function App() {
           onChange={setSettings}
           onRegenerate={() => setSettings((s) => ({ ...s, seed: s.seed + 1 }))}
         />
-        <AlgorithmPicker selectedId={algorithmId} onSelect={setAlgorithmId} />
+        {mode === 'builtin' && <AlgorithmPicker selectedId={algorithmId} onSelect={setAlgorithmId} />}
       </nav>
 
-      <main className="app__stage">
-        <Canvas engine={player.engine} style={settings.style} theme={DARK} />
-        <ErrorBanner error={error} onDismiss={() => setError(null)} />
+      <main className={`app__stage${mode === 'custom' ? ' app__stage--split' : ''}`}>
+        <div style={{ position: 'relative', minHeight: 0, height: '100%' }}>
+          <Canvas engine={player.engine} style={settings.style} theme={DARK} />
+          <ErrorBanner error={error} onDismiss={() => setError(null)} />
+        </div>
+        {mode === 'custom' && (
+          <CodePanel
+            source={source}
+            busy={busy}
+            error={error}
+            onSourceChange={setSource}
+            onRun={runCustom}
+          />
+        )}
       </main>
 
       <section className="app__controls">
@@ -151,13 +215,37 @@ export default function App() {
       </section>
 
       <aside className="app__inspector">
-        <Telemetry
-          counts={player.engine?.frame.counts ?? { reads: 0, writes: 0, compares: 0, swaps: 0 }}
-          index={player.index}
-          total={player.total}
-          sorted={sorted}
-          algorithm={algorithm}
-        />
+        {mode === 'custom' ? (
+          <>
+            <section className="inspector__block">
+              <div className="label">result</div>
+              <span className={`chip chip--${sorted ? 'ok' : 'bad'}`}>
+                {sorted ? 'sorted' : 'not sorted'}
+              </span>
+              <dl className="grid2" style={{ marginTop: 'var(--space-3)' }}>
+                <div className="readout">
+                  <dt>compares</dt>
+                  <dd className="num">
+                    {(player.engine?.frame.counts.compares ?? 0).toLocaleString()}
+                  </dd>
+                </div>
+                <div className="readout">
+                  <dt>swaps</dt>
+                  <dd className="num">{(player.engine?.frame.counts.swaps ?? 0).toLocaleString()}</dd>
+                </div>
+              </dl>
+            </section>
+            <ApiReference />
+          </>
+        ) : (
+          <Telemetry
+            counts={player.engine?.frame.counts ?? { reads: 0, writes: 0, compares: 0, swaps: 0 }}
+            index={player.index}
+            total={player.total}
+            sorted={sorted}
+            algorithm={algorithm}
+          />
+        )}
       </aside>
     </div>
   )
