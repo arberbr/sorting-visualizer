@@ -13,12 +13,26 @@ const bubble = (a: TrackedArray) => {
 
 describe('checkSorted', () => {
   it('accepts sorted and empty arrays', () => {
-    expect(checkSorted([])).toEqual({ sorted: true, firstUnsorted: -1 })
-    expect(checkSorted([1, 1, 2, 3])).toEqual({ sorted: true, firstUnsorted: -1 })
+    expect(checkSorted([], [])).toEqual({ sorted: true, firstUnsorted: -1 })
+    expect(checkSorted([1, 1, 2, 3], [3, 1, 2, 1])).toEqual({ sorted: true, firstUnsorted: -1 })
   })
 
-  it('reports the first index that breaks the order', () => {
-    expect(checkSorted([1, 3, 2])).toEqual({ sorted: false, firstUnsorted: 2 })
+  it('reports the first index that differs from the answer', () => {
+    expect(checkSorted([1, 3, 2], [1, 2, 3])).toEqual({ sorted: false, firstUnsorted: 1 })
+  })
+
+  it('rejects an ascending array that is not the input', () => {
+    // The case order-only checking gets wrong: every value overwritten with
+    // zero is flawlessly ascending and has destroyed the data.
+    expect(checkSorted([0, 0, 0, 0], [3, 1, 2, 4])).toEqual({ sorted: false, firstUnsorted: 0 })
+  })
+
+  it('rejects a duplicated element, even in order', () => {
+    expect(checkSorted([1, 1, 3], [1, 2, 3])).toEqual({ sorted: false, firstUnsorted: 1 })
+  })
+
+  it('rejects a result of the wrong length', () => {
+    expect(checkSorted([1, 2], [1, 2, 3])).toEqual({ sorted: false, firstUnsorted: 2 })
   })
 })
 
@@ -48,7 +62,8 @@ describe('runSort', () => {
     expect(r.ok).toBe(true)
     if (!r.ok) return
     expect(r.sorted).toBe(false)
-    expect(r.firstUnsorted).toBe(1)
+    // [2, 1, 3] against the answer [1, 2, 3]: index 0 is already wrong.
+    expect(r.firstUnsorted).toBe(0)
     expect(r.trace.steps).toHaveLength(1)
   })
 

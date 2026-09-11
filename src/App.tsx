@@ -8,7 +8,12 @@ import CodePanel from './components/CodePanel'
 import Controls from './components/Controls'
 import ErrorBanner from './components/ErrorBanner'
 import RaceGrid from './components/RaceGrid'
-import Telemetry, { formatCount } from './components/Telemetry'
+import Telemetry, {
+  formatCount,
+  verdictClass,
+  verdictLabel,
+  type Verdict,
+} from './components/Telemetry'
 import { ALGORITHMS, getAlgorithm } from './algorithms'
 import { Sonifier } from './audio/sonifier'
 import { loadDraft, saveDraft } from './customCode'
@@ -36,7 +41,11 @@ export default function App() {
   const [algorithmId, setAlgorithmId] = useState('quick-lomuto')
   const [settings, setSettings] = useState<ArraySettings>(DEFAULT_SETTINGS)
   const [trace, setTrace] = useState<Trace | null>(null)
-  const [sorted, setSorted] = useState(true)
+  // Absent until a run actually reports one: `null` before the first run and
+  // after any failed one, so the chip can never claim a verdict it doesn't
+  // have (it used to start life green, over an empty canvas, and keep the
+  // previous run's answer through a failure).
+  const [verdict, setVerdict] = useState<Verdict | null>(null)
   const [error, setError] = useState<RunError | null>(null)
   const [mode, setMode] = useState<'builtin' | 'custom' | 'race'>('builtin')
   const [source, setSource] = useState(() => loadDraft())
@@ -83,9 +92,15 @@ export default function App() {
     let max = 1
     for (const v of engine.frame.main) if (v > max) max = v
     return engine.onFrame((frame) => {
-      const i = frame.lastWrite.findIndex((t) => t === frame.index - 1)
-      const j = i >= 0 ? i : frame.lastCompare.findIndex((t) => t === frame.index - 1)
-      if (j >= 0) sonifier.note(frame.main[j], max)
+      // Whichever channel the step that just happened touched: writes, then
+      // compares, then plain reads (the only channel a non-comparison sort
+      // ever touches, so without it those algorithms would play silence).
+      const at = frame.index - 1
+      const touched = (a: Int32Array) => a.findIndex((t) => t === at)
+      const i = touched(frame.lastWrite)
+      const j = i >= 0 ? i : touched(frame.lastCompare)
+      const k = j >= 0 ? j : touched(frame.lastRead)
+      if (k >= 0) sonifier.note(frame.main[k], max)
     })
   }, [player.engine, audioOn, sonifier])
 
@@ -122,6 +137,7 @@ export default function App() {
       } catch (e) {
         if (seq !== requestSeq.current) return
         setError({ code: 'runtime', message: e instanceof Error ? e.message : String(e) })
+        setVerdict(null)
         setTrace(null)
         return
       }
@@ -130,10 +146,11 @@ export default function App() {
       if (!result) return // cancelled outright — no result, and nothing to report
       if (result.ok) {
         setError(null)
-        setSorted(result.sorted)
+        setVerdict({ sorted: result.sorted, firstUnsorted: result.firstUnsorted })
         setTrace(result.trace)
       } else {
         setError(result.error)
+        setVerdict(null)
         setTrace(null)
       }
     },
@@ -152,6 +169,7 @@ export default function App() {
     } catch (e) {
       if (seq !== requestSeq.current) return
       setError({ code: 'runtime', message: e instanceof Error ? e.message : String(e) })
+      setVerdict(null)
       setTrace(null)
       return
     }
@@ -160,10 +178,11 @@ export default function App() {
     if (!result) return // cancelled outright — no result, and nothing to report
     if (result.ok) {
       setError(null)
-      setSorted(result.sorted)
+      setVerdict({ sorted: result.sorted, firstUnsorted: result.firstUnsorted })
       setTrace(result.trace)
     } else {
       setError(result.error)
+      setVerdict(null)
       setTrace(null)
     }
   }, [run, supersede, settings, source])
@@ -180,6 +199,9 @@ export default function App() {
     // Once, for the whole batch: the lanes below are one logical dispatch
     // and must not cancel each other.
     supersede()
+    // A race has no single-run verdict of its own, and the previous one is
+    // about to be about a different run entirely.
+    setVerdict(null)
     let input: number[]
     try {
       input = generate(Math.max(8, settings.size), settings.distribution, settings.seed)
@@ -461,8 +483,8 @@ export default function App() {
           <>
             <section className="inspector__block">
               <div className="label">result</div>
-              <span className={`chip chip--${sorted ? 'ok' : 'bad'}`}>
-                {sorted ? 'sorted' : 'not sorted'}
+              <span className={verdictClass(verdict)} data-testid="verdict">
+                {verdictLabel(verdict)}
               </span>
               <dl className="grid2" style={{ marginTop: 'var(--space-3)' }}>
                 <div className="readout">
@@ -508,7 +530,7 @@ export default function App() {
             counts={player.engine?.frame.counts ?? { reads: 0, writes: 0, compares: 0, swaps: 0 }}
             index={player.index}
             total={player.total}
-            sorted={sorted}
+            verdict={verdict}
             algorithm={algorithm}
           />
         )}

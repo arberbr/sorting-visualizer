@@ -67,6 +67,12 @@ export function elementColor(i: number, frame: FrameState, theme: Theme): string
   if (write > 0) return mix(theme.idle, theme.swap, 0.35 + 0.65 * write)
   const cmp = heat(frame.index, frame.lastCompare[i])
   if (cmp > 0) return mix(theme.idle, theme.compare, 0.35 + 0.65 * cmp)
+  // A plain read is activity, not a comparison. It decays exactly like the
+  // others, but in its own quiet colour: the non-comparison family (counting
+  // sort, radix, pigeonhole) is all reads and no compares, and painting those
+  // amber claimed a comparison that never happened.
+  const read = heat(frame.index, frame.lastRead[i])
+  if (read > 0) return mix(theme.idle, theme.read, 0.35 + 0.65 * read)
   if (frame.sorted[i]) return theme.sorted
   if (frame.range && (i < frame.range[0] || i > frame.range[1])) return dim(theme.idle)
   return theme.idle

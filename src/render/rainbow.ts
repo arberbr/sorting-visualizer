@@ -16,7 +16,11 @@ export const drawRainbow: Renderer = (ctx, frame, theme, size) => {
   const m = barMetrics(main, n)
   for (let i = 0; i < n; i++) {
     const hue = Math.round((frame.main[i] / max) * 330)
-    const touched = Math.max(heat(frame.index, frame.lastWrite[i]), heat(frame.index, frame.lastCompare[i]))
+    const touched = Math.max(
+      heat(frame.index, frame.lastWrite[i]),
+      heat(frame.index, frame.lastCompare[i]),
+      heat(frame.index, frame.lastRead[i]),
+    )
     const light = 45 + touched * 35
     ctx.fillStyle = `hsl(${hue}, 78%, ${light}%)`
     ctx.fillRect(main.x + i * m.slot, main.y, Math.max(1, m.slot), main.h)

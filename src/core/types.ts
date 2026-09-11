@@ -22,6 +22,15 @@ export interface Counts {
 
 export const emptyCounts = (): Counts => ({ reads: 0, writes: 0, compares: 0, swaps: 0 })
 
+/**
+ * Compile-time exhaustiveness guard. Put it in a `default:` case over a union
+ * and adding a variant without handling it becomes a type error rather than a
+ * silent no-op — `tsc` never reports a *missing* case on its own, and a
+ * reducer that quietly ignores a new Step would typecheck and stay green.
+ * Does nothing at runtime: by construction it is unreachable.
+ */
+export function assertNever(_value: never): void {}
+
 export type SortFn = (arr: TrackedArray) => void
 
 export type Family =

@@ -21,7 +21,7 @@ describe('theme', () => {
   })
 
   it('gives every semantic role a distinct color', () => {
-    const roles = [DARK.idle, DARK.compare, DARK.swap, DARK.pivot, DARK.sorted, DARK.aux]
+    const roles = [DARK.idle, DARK.read, DARK.compare, DARK.swap, DARK.pivot, DARK.sorted, DARK.aux]
     expect(new Set(roles).size).toBe(roles.length)
   })
 })

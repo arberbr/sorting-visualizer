@@ -14,6 +14,7 @@ export interface Keyframe {
   pivot: number
   range: [number, number] | null
   lastCompare: Int32Array
+  lastRead: Int32Array
   lastWrite: Int32Array
 }
 
@@ -88,7 +89,7 @@ export function runSort(
   }
 
   const finalArray = arr.snapshot()
-  const { sorted, firstUnsorted } = checkSorted(finalArray)
+  const { sorted, firstUnsorted } = checkSorted(finalArray, input)
 
   return {
     ok: true,

@@ -6,6 +6,7 @@ export interface Theme {
   text: string
   muted: string
   idle: string
+  read: string
   compare: string
   swap: string
   pivot: string
@@ -24,6 +25,7 @@ export const DARK: Theme = {
   text: '#e6e8ee',
   muted: '#868c9e',
   idle: '#4a5164',
+  read: '#8d97b5',
   compare: '#f5b642',
   swap: '#f2537d',
   pivot: '#a06bff',

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { runSort } from './runner'
 import { buildKeyframes, stateAt } from './keyframes'
-import { applyStep, createInitialState } from './frame'
+import { applyStep, createInitialState, type FrameState } from './frame'
 import type { TrackedArray } from './trackedArray'
 
 const bubble = (a: TrackedArray) => {
@@ -112,6 +112,28 @@ const mergeTraceOf = (n: number) => {
   return r.trace
 }
 
+/**
+ * Every field of a FrameState, with typed arrays flattened to plain arrays so
+ * a deep-equal over the whole object is meaningful (toEqual on two different
+ * typed-array instances compares by index, but a length mismatch or a null
+ * aux would otherwise read oddly, and Object.entries is the point here).
+ *
+ * Deliberately field-*agnostic*: the bug this whole file exists to catch is a
+ * FrameState field that `applyStep` maintains and `restore()` forgets to
+ * bring back from the keyframe — pivot and range were exactly that once.
+ * TypeScript cannot catch it (excess-property checks catch extra fields,
+ * never omitted ones), so an assertion that names the fields it compares
+ * misses every field added after it was written. This one covers whatever
+ * FrameState happens to contain.
+ */
+const flatten = (s: FrameState): Record<string, unknown> => {
+  const out: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(s)) {
+    out[key] = ArrayBuffer.isView(value) ? Array.from(value as unknown as ArrayLike<number>) : value
+  }
+  return out
+}
+
 describe('stateAt (full FrameState parity across keyframe boundaries)', () => {
   it('matches a linear replay on every field, at and around keyframe boundaries', () => {
     // n=400 comfortably clears 5000 steps for merge sort's O(n log n) work,
@@ -140,16 +162,9 @@ describe('stateAt (full FrameState parity across keyframe boundaries)', () => {
       const fast = stateAt(trace, i)
       const slow = linearStateAt(trace, i)
 
-      expect(Array.from(fast.main)).toEqual(Array.from(slow.main))
+      // One assertion over the whole state, every field of it, by name or not.
+      expect(flatten(fast)).toEqual(flatten(slow))
       expect(fast.aux).not.toBeNull()
-      expect(slow.aux).not.toBeNull()
-      expect(Array.from(fast.aux!)).toEqual(Array.from(slow.aux!))
-      expect(Array.from(fast.sorted)).toEqual(Array.from(slow.sorted))
-      expect(fast.pivot).toBe(slow.pivot)
-      expect(fast.range).toEqual(slow.range)
-      expect(Array.from(fast.lastCompare)).toEqual(Array.from(slow.lastCompare))
-      expect(Array.from(fast.lastWrite)).toEqual(Array.from(slow.lastWrite))
-      expect(fast.counts).toEqual(slow.counts)
       expect(fast.index).toBe(i)
     }
   })
@@ -164,14 +179,7 @@ describe('stateAt (full FrameState parity across keyframe boundaries)', () => {
       const fast = stateAt(withTightKeyframes, i)
       const slow = linearStateAt(trace, i)
 
-      expect(Array.from(fast.main)).toEqual(Array.from(slow.main))
-      expect(Array.from(fast.aux!)).toEqual(Array.from(slow.aux!))
-      expect(Array.from(fast.sorted)).toEqual(Array.from(slow.sorted))
-      expect(fast.pivot).toBe(slow.pivot)
-      expect(fast.range).toEqual(slow.range)
-      expect(Array.from(fast.lastCompare)).toEqual(Array.from(slow.lastCompare))
-      expect(Array.from(fast.lastWrite)).toEqual(Array.from(slow.lastWrite))
-      expect(fast.counts).toEqual(slow.counts)
+      expect(flatten(fast)).toEqual(flatten(slow))
       expect(fast.index).toBe(i)
     }
   })

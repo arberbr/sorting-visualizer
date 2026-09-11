@@ -1,4 +1,4 @@
-import { emptyCounts, type Counts, type Step } from './types'
+import { assertNever, emptyCounts, type Counts, type Step } from './types'
 
 /** Everything a renderer needs to draw one moment of a run. */
 export interface FrameState {
@@ -9,7 +9,15 @@ export interface FrameState {
   /** -1 when no pivot is marked. */
   pivot: number
   range: [number, number] | null
+  /** Step index each element was last *compared* at. Compares only. */
   lastCompare: Int32Array
+  /**
+   * Step index each element was last plainly *read* at. Its own channel, not
+   * lastCompare's: a read is activity, not a comparison, and painting it in
+   * the compare colour made the whole non-comparison family — all reads and
+   * no compares — look like it was comparing everything.
+   */
+  lastRead: Int32Array
   lastWrite: Int32Array
   counts: Counts
 }
@@ -26,6 +34,7 @@ export function createInitialState(input: readonly number[], auxLength: number):
     pivot: -1,
     range: null,
     lastCompare: new Int32Array(n).fill(NEVER),
+    lastRead: new Int32Array(n).fill(NEVER),
     lastWrite: new Int32Array(n).fill(NEVER),
     counts: emptyCounts(),
   }
@@ -37,7 +46,7 @@ export function applyStep(s: FrameState, step: Step): void {
   switch (step.t) {
     case 'read':
       s.counts.reads++
-      if (step.lane === 0) s.lastCompare[step.i] = at
+      if (step.lane === 0) s.lastRead[step.i] = at
       break
     case 'write':
       s.counts.writes++
@@ -85,8 +94,12 @@ export function applyStep(s: FrameState, step: Step): void {
           s.pivot = -1
           s.range = null
           break
+        default:
+          assertNever(step.kind)
       }
       break
+    default:
+      assertNever(step)
   }
   s.index = at + 1
 }

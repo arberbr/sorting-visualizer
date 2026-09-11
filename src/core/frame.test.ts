@@ -32,6 +32,17 @@ describe('applyStep', () => {
     expect(s.lastWrite[2]).toBe(0)
   })
 
+  it('records a read on its own channel, never the compare channel', () => {
+    const s = state()
+    applyStep(s, { t: 'read', lane: 0, i: 2 })
+    expect(s.counts.reads).toBe(1)
+    expect(Array.from(s.main)).toEqual([5, 3, 8])
+    expect(s.lastRead[2]).toBe(0)
+    // Untouched: a read is not a comparison, and the renderer colours the two
+    // differently (see elementColor).
+    expect(s.lastCompare[2]).toBeLessThan(0)
+  })
+
   it('records compares against both indices without changing data', () => {
     const s = state()
     applyStep(s, { t: 'compare', lane: 0, i: 0, j: 1, result: 1 })

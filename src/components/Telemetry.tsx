@@ -5,11 +5,37 @@ export function formatCount(n: number): string {
   return n.toLocaleString('en-US')
 }
 
+/** The result of checking a finished run against the sorted input. */
+export interface Verdict {
+  sorted: boolean
+  /** First index that differs from the answer; -1 when there is none. */
+  firstUnsorted: number
+}
+
+/**
+ * The wording of the correctness chip, shared with the custom-mode inspector
+ * in App so the two can never drift. `null` means no run has reported yet —
+ * before the first run, and after a failed one — and must not read as a
+ * verdict either way.
+ */
+export function verdictLabel(verdict: Verdict | null): string {
+  if (!verdict) return 'no result yet'
+  if (verdict.sorted) return 'sorted'
+  return verdict.firstUnsorted >= 0
+    ? `not sorted · first wrong at ${verdict.firstUnsorted}`
+    : 'not sorted'
+}
+
+/** Matching chip class: green for sorted, red for not, neutral for no verdict. */
+export function verdictClass(verdict: Verdict | null): string {
+  return verdict ? `chip chip--${verdict.sorted ? 'ok' : 'bad'}` : 'chip'
+}
+
 interface Props {
   counts: Counts
   index: number
   total: number
-  sorted: boolean
+  verdict: Verdict | null
   algorithm: Algorithm
 }
 
@@ -20,7 +46,7 @@ const COUNTERS: ReadonlyArray<[keyof Counts, string]> = [
   ['writes', 'writes'],
 ]
 
-export default function Telemetry({ counts, index, total, sorted, algorithm }: Props) {
+export default function Telemetry({ counts, index, total, verdict, algorithm }: Props) {
   const { meta } = algorithm
   return (
     <div className="inspector">
@@ -78,11 +104,8 @@ export default function Telemetry({ counts, index, total, sorted, algorithm }: P
 
       <section className="inspector__block">
         <div className="label">result</div>
-        <span
-          className={`chip chip--${sorted ? 'ok' : 'bad'}`}
-          data-testid="verdict"
-        >
-          {sorted ? 'sorted' : 'not sorted'}
+        <span className={verdictClass(verdict)} data-testid="verdict">
+          {verdictLabel(verdict)}
         </span>
       </section>
     </div>

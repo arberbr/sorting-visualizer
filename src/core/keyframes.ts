@@ -55,8 +55,12 @@ function restore(trace: Trace, kf: Keyframe): FrameState {
   s.counts = { ...kf.counts }
   s.index = kf.index
   s.pivot = kf.pivot
-  s.range = kf.range
+  // Copied, not aliased, in both directions (see snapshot below): a keyframe
+  // is read many times and must never share a mutable tuple with the live
+  // state that replays on top of it.
+  s.range = kf.range ? [kf.range[0], kf.range[1]] : null
   s.lastCompare.set(kf.lastCompare)
+  s.lastRead.set(kf.lastRead)
   s.lastWrite.set(kf.lastWrite)
   return s
 }
@@ -69,8 +73,9 @@ function snapshot(s: FrameState): Keyframe {
     counts: { ...s.counts },
     sorted: Uint8Array.from(s.sorted),
     pivot: s.pivot,
-    range: s.range,
+    range: s.range ? [s.range[0], s.range[1]] : null,
     lastCompare: Int32Array.from(s.lastCompare),
+    lastRead: Int32Array.from(s.lastRead),
     lastWrite: Int32Array.from(s.lastWrite),
   }
 }
