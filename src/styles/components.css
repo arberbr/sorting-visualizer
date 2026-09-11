@@ -202,7 +202,13 @@
 
 .app__stage--split {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) minmax(220px, 40%);
+  /* Both rows get an explicit floor — previously the canvas row had none
+     (`minmax(0, 1fr)`), so whenever the outer stage track itself got
+     squeezed (e.g. under 1100px, see global.css), the code panel's own
+     220px floor claimed space first and the canvas was left with whatever
+     was left, down to 0. A floor on both means neither can fully starve
+     the other; the code editor still scrolls internally past its floor. */
+  grid-template-rows: minmax(160px, 1fr) minmax(160px, 40%);
 }
 
 .codepanel {
@@ -331,8 +337,25 @@
   width: 80px;
 }
 
+/* Below 900px `.race` drops to a single column, but the `[data-lanes]`
+   rules above still declare row counts sized for a 2-column layout (2
+   lanes = 1 row, 3-4 lanes = 2 rows) — with only 1 column now, that leaves
+   the 2nd (or 3rd/4th) lane with no explicit row to land in, so it falls
+   into an implicit, content-sized row while its siblings get squeezed
+   toward 0. Matching specificity is required to win over `[data-lanes]`:
+   `grid-template-rows: none` clears their row template so every lane
+   becomes an implicit row, and `grid-auto-rows: 1fr` makes all of those
+   implicit rows share the available height evenly, whatever the lane
+   count. */
 @media (max-width: 900px) {
   .race {
     grid-template-columns: 1fr;
+  }
+
+  .race[data-lanes='2'],
+  .race[data-lanes='3'],
+  .race[data-lanes='4'] {
+    grid-template-rows: none;
+    grid-auto-rows: 1fr;
   }
 }
