@@ -114,10 +114,6 @@ input[type='range'] {
   border-bottom: var(--hairline);
 }
 
-.app__shortcuts {
-  white-space: normal;
-}
-
 .app__rail {
   grid-area: rail;
   overflow-y: auto;
