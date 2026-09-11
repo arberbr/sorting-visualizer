@@ -6,14 +6,18 @@ import Canvas from './components/Canvas'
 import CodePanel from './components/CodePanel'
 import Controls from './components/Controls'
 import ErrorBanner from './components/ErrorBanner'
-import Telemetry from './components/Telemetry'
-import { getAlgorithm } from './algorithms'
+import RaceGrid from './components/RaceGrid'
+import Telemetry, { formatCount } from './components/Telemetry'
+import { ALGORITHMS, getAlgorithm } from './algorithms'
 import { loadDraft, saveDraft } from './customCode'
 import { generate } from './core/generate'
 import type { RunError, Trace } from './core/runner'
 import { usePlayer } from './player/usePlayer'
+import { useRace, type RaceInput } from './player/useRace'
 import { DARK } from './render/theme'
 import { useRunner } from './worker/useRunner'
+
+const DEFAULT_RACE_IDS = ['bubble', 'quick-lomuto']
 
 const DEFAULT_SETTINGS: ArraySettings = {
   size: 64,
@@ -31,8 +35,10 @@ export default function App() {
   const [trace, setTrace] = useState<Trace | null>(null)
   const [sorted, setSorted] = useState(true)
   const [error, setError] = useState<RunError | null>(null)
-  const [mode, setMode] = useState<'builtin' | 'custom'>('builtin')
+  const [mode, setMode] = useState<'builtin' | 'custom' | 'race'>('builtin')
   const [source, setSource] = useState(() => loadDraft())
+  const [raceIds, setRaceIds] = useState<string[]>(DEFAULT_RACE_IDS)
+  const [raceInputs, setRaceInputs] = useState<RaceInput[]>([])
 
   useEffect(() => {
     saveDraft(source)
@@ -40,6 +46,7 @@ export default function App() {
 
   const { run, busy } = useRunner()
   const player = usePlayer(trace)
+  const raceState = useRace(raceInputs)
   const algorithm = getAlgorithm(algorithmId)!
 
   // Guards against a slow, superseded request clobbering a newer one's
@@ -109,6 +116,51 @@ export default function App() {
     }
   }, [run, settings, source])
 
+  // Fires every lane's run concurrently over one shared input, same shared
+  // `requestSeq` counter as `start`/`runCustom` (so a stale race batch can't
+  // clobber a newer builtin/custom/race result, and vice versa). `run()`
+  // never rejects — a lane that fails resolves with `ok: false` rather than
+  // throwing — so Promise.all always settles and `busy` can never wedge on
+  // one bad lane; the successful lanes still populate the grid, and the
+  // first failure surfaces in the error banner.
+  const startRace = useCallback(async () => {
+    const seq = ++requestSeq.current
+    let input: number[]
+    try {
+      input = generate(Math.max(8, settings.size), settings.distribution, settings.seed)
+    } catch (e) {
+      if (seq !== requestSeq.current) return
+      setError({ code: 'runtime', message: e instanceof Error ? e.message : String(e) })
+      setRaceInputs([])
+      return
+    }
+    const results = await Promise.all(
+      raceIds.map((id) => {
+        // Same maxN trimming as `start`: a lane running a capped algorithm
+        // (e.g. bogosort) must not receive more input than it can finish.
+        const cap = getAlgorithm(id)?.meta.maxN
+        const capped = cap ? input.slice(0, cap) : input
+        return run({ kind: 'builtin', algorithmId: id, input: capped })
+      }),
+    )
+    if (seq !== requestSeq.current) return // superseded by a later run
+    const lanes: RaceInput[] = []
+    let firstError: RunError | null = null
+    results.forEach((result, i) => {
+      if (result.ok) {
+        lanes.push({
+          id: raceIds[i],
+          label: getAlgorithm(raceIds[i])!.meta.name,
+          trace: result.trace,
+        })
+      } else if (!firstError) {
+        firstError = result.error
+      }
+    })
+    setError(firstError)
+    setRaceInputs(lanes)
+  }, [raceIds, run, settings])
+
   // Re-run whenever the algorithm or the input definition changes.
   //
   // Leading-edge + trailing debounce: the first change after a quiet spell
@@ -157,6 +209,47 @@ export default function App() {
     return () => clearTimeout(windowTimer.current)
   }, [mode, algorithmId, settings, start])
 
+  // Same leading-edge + trailing debounce as the effect above, kept as an
+  // independent timer/flag pair rather than sharing one with `start` so a
+  // burst of settings changes while switching between 'builtin' and 'race'
+  // can't leave either debounce window in a confused state.
+  const raceInWindow = useRef(false)
+  const raceWindowTimer = useRef<number | undefined>(undefined)
+
+  useEffect(() => {
+    if (mode !== 'race') return
+    if (!raceInWindow.current) {
+      raceInWindow.current = true
+      void startRace()
+      raceWindowTimer.current = window.setTimeout(() => {
+        raceInWindow.current = false
+      }, DEBOUNCE_MS)
+    } else {
+      clearTimeout(raceWindowTimer.current)
+      raceWindowTimer.current = window.setTimeout(() => {
+        raceInWindow.current = false
+        void startRace()
+      }, DEBOUNCE_MS)
+    }
+    return () => clearTimeout(raceWindowTimer.current)
+  }, [mode, raceIds, settings, startRace])
+
+  // There is exactly one requestAnimationFrame loop per transport
+  // (usePlayer's and useRace's), and each only runs while its own `playing`
+  // flag is true. Nothing stops both flags from being true at once, though —
+  // e.g. pressing play in builtin mode, then switching to race mode without
+  // pausing first, which would otherwise leave the builtin loop ticking
+  // (and re-rendering App on every UI-refresh tick) behind an unmounted
+  // Canvas. Whichever transport's view isn't currently active gets paused
+  // when the mode changes away from it.
+  useEffect(() => {
+    if (mode === 'race') player.pause()
+  }, [mode]) // eslint-disable-line -- player.pause is a stable setState wrapper; omitted deliberately
+
+  useEffect(() => {
+    if (mode !== 'race') raceState.pause()
+  }, [mode]) // eslint-disable-line -- same as above, for raceState.pause
+
   return (
     <div className="app">
       <header className="app__head">
@@ -171,6 +264,9 @@ export default function App() {
           <button aria-pressed={mode === 'custom'} onClick={() => setMode('custom')}>
             your code
           </button>
+          <button aria-pressed={mode === 'race'} onClick={() => setMode('race')}>
+            race
+          </button>
         </div>
       </header>
 
@@ -182,13 +278,71 @@ export default function App() {
           onRegenerate={() => setSettings((s) => ({ ...s, seed: s.seed + 1 }))}
         />
         {mode === 'builtin' && <AlgorithmPicker selectedId={algorithmId} onSelect={setAlgorithmId} />}
+        {mode === 'race' && (
+          <div className="config">
+            <div className="label">race lanes (2–4)</div>
+            {raceIds.map((id, slot) => (
+              <div className="race-lanes__row" key={slot}>
+                <select
+                  value={id}
+                  aria-label={`Lane ${slot + 1}`}
+                  onChange={(e) =>
+                    setRaceIds((ids) => ids.map((v, k) => (k === slot ? e.target.value : v)))
+                  }
+                >
+                  {/* Each algorithm can only race in one lane at a time — a
+                      lane's own current selection stays in its own list, but
+                      other lanes' picks are hidden so two lanes can never
+                      collide on the same id. RaceEngine/RaceGrid key every
+                      lane by that id, so a collision would mean duplicate
+                      React keys and two lanes fighting over one canvas. */}
+                  {ALGORITHMS.filter(
+                    (a) => a.meta.id === id || !raceIds.includes(a.meta.id),
+                  ).map((a) => (
+                    <option key={a.meta.id} value={a.meta.id}>
+                      {a.meta.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ))}
+            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+              <button
+                disabled={raceIds.length >= 4}
+                onClick={() =>
+                  setRaceIds((ids) => {
+                    const next = ALGORITHMS.find((a) => !ids.includes(a.meta.id))
+                    return next ? [...ids, next.meta.id] : ids
+                  })
+                }
+              >
+                add lane
+              </button>
+              <button
+                disabled={raceIds.length <= 2}
+                onClick={() => setRaceIds((ids) => ids.slice(0, -1))}
+              >
+                remove lane
+              </button>
+            </div>
+          </div>
+        )}
       </nav>
 
       <main className={`app__stage${mode === 'custom' ? ' app__stage--split' : ''}`}>
-        <div style={{ position: 'relative', minHeight: 0, height: '100%' }}>
-          <Canvas engine={player.engine} style={settings.style} theme={DARK} />
-          <ErrorBanner error={error} onDismiss={() => setError(null)} />
-        </div>
+        {mode === 'race' ? (
+          <div style={{ position: 'relative', minHeight: 0, height: '100%' }}>
+            {raceState.race && (
+              <RaceGrid race={raceState.race} style={settings.style} theme={DARK} />
+            )}
+            <ErrorBanner error={error} onDismiss={() => setError(null)} />
+          </div>
+        ) : (
+          <div style={{ position: 'relative', minHeight: 0, height: '100%' }}>
+            <Canvas engine={player.engine} style={settings.style} theme={DARK} />
+            <ErrorBanner error={error} onDismiss={() => setError(null)} />
+          </div>
+        )}
         {mode === 'custom' && (
           <CodePanel
             source={source}
@@ -201,17 +355,31 @@ export default function App() {
       </main>
 
       <section className="app__controls">
-        <Controls
-          playing={player.playing}
-          index={player.index}
-          total={player.total}
-          speed={player.speed}
-          disabled={!trace}
-          onToggle={player.toggle}
-          onStep={(d) => (d > 0 ? player.stepForward() : player.stepBack())}
-          onSeek={player.seek}
-          onSpeed={player.setSpeed}
-        />
+        {mode === 'race' ? (
+          <Controls
+            playing={raceState.playing}
+            index={raceState.index}
+            total={raceState.total}
+            speed={raceState.speed}
+            disabled={!raceState.race}
+            onToggle={raceState.toggle}
+            onStep={(d) => (d > 0 ? raceState.stepForward() : raceState.stepBack())}
+            onSeek={raceState.seek}
+            onSpeed={raceState.setSpeed}
+          />
+        ) : (
+          <Controls
+            playing={player.playing}
+            index={player.index}
+            total={player.total}
+            speed={player.speed}
+            disabled={!trace}
+            onToggle={player.toggle}
+            onStep={(d) => (d > 0 ? player.stepForward() : player.stepBack())}
+            onSeek={player.seek}
+            onSpeed={player.setSpeed}
+          />
+        )}
       </section>
 
       <aside className="app__inspector">
@@ -237,6 +405,30 @@ export default function App() {
             </section>
             <ApiReference />
           </>
+        ) : mode === 'race' ? (
+          <div className="inspector">
+            <section className="inspector__block">
+              <div className="label">race</div>
+              <p className="inspector__desc">
+                {raceState.race
+                  ? `${raceState.race.lanes.length} lanes over one shared input. ${formatCount(raceState.total)} steps to the longest trace.`
+                  : 'Pick 2–4 algorithms in the rail to start a race.'}
+              </p>
+            </section>
+            {raceState.race?.lanes.map((lane) => {
+              const meta = getAlgorithm(lane.id)?.meta
+              if (!meta) return null
+              return (
+                <section className="inspector__block" key={lane.id}>
+                  <div className="label">{lane.label}</div>
+                  <div className="chips" style={{ marginTop: 'var(--space-2)' }}>
+                    <span className="chip mono">avg {meta.average}</span>
+                    <span className="chip">{meta.stable ? 'stable' : 'unstable'}</span>
+                  </div>
+                </section>
+              )
+            })}
+          </div>
         ) : (
           <Telemetry
             counts={player.engine?.frame.counts ?? { reads: 0, writes: 0, compares: 0, swaps: 0 }}
