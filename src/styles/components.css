@@ -313,6 +313,16 @@
   min-width: 0;
 }
 
+.audio {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.audio input[type='range'] {
+  width: 80px;
+}
+
 @media (max-width: 900px) {
   .race {
     grid-template-columns: 1fr;

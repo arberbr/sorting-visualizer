@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import AlgorithmPicker from './components/AlgorithmPicker'
 import ApiReference from './components/ApiReference'
 import ArrayConfig, { type ArraySettings } from './components/ArrayConfig'
+import AudioToggle from './components/AudioToggle'
 import Canvas from './components/Canvas'
 import CodePanel from './components/CodePanel'
 import Controls from './components/Controls'
@@ -9,6 +10,7 @@ import ErrorBanner from './components/ErrorBanner'
 import RaceGrid from './components/RaceGrid'
 import Telemetry, { formatCount } from './components/Telemetry'
 import { ALGORITHMS, getAlgorithm } from './algorithms'
+import { Sonifier } from './audio/sonifier'
 import { loadDraft, saveDraft } from './customCode'
 import { generate } from './core/generate'
 import type { RunError, Trace } from './core/runner'
@@ -48,6 +50,43 @@ export default function App() {
   const player = usePlayer(trace)
   const raceState = useRace(raceInputs)
   const algorithm = getAlgorithm(algorithmId)!
+
+  // Off by default — a delight, not a requirement. One Sonifier for the
+  // component's lifetime; the AudioContext inside it isn't created until the
+  // toggle is actually clicked (browsers suspend it until a user gesture).
+  const sonifier = useMemo(() => new Sonifier(), [])
+  const [audioOn, setAudioOn] = useState(false)
+  const [volume, setVolume] = useState(0.25)
+
+  useEffect(() => () => sonifier.dispose(), [sonifier])
+
+  useEffect(() => {
+    sonifier.setEnabled(audioOn)
+  }, [audioOn, sonifier])
+
+  useEffect(() => {
+    sonifier.setVolume(volume)
+  }, [volume, sonifier])
+
+  // Sound follows the single-run transport (builtin/custom), so it works
+  // for playback and for single stepping alike. Deliberately not wired to
+  // race mode: up to 4 lanes advancing independently would routinely blow
+  // past MAX_VOICES and turn into noise rather than a signal, and the brief
+  // only asked for the single-run case. In practice this needs no explicit
+  // mode check — player.engine is paused whenever mode is 'race' (see the
+  // transport-pause effect below), so it never emits frames, and this
+  // effect stays inert, while the race view is silent.
+  useEffect(() => {
+    const engine = player.engine
+    if (!engine || !audioOn) return
+    let max = 1
+    for (const v of engine.frame.main) if (v > max) max = v
+    return engine.onFrame((frame) => {
+      const i = frame.lastWrite.findIndex((t) => t === frame.index - 1)
+      const j = i >= 0 ? i : frame.lastCompare.findIndex((t) => t === frame.index - 1)
+      if (j >= 0) sonifier.note(frame.main[j], max)
+    })
+  }, [player.engine, audioOn, sonifier])
 
   // Guards against a slow, superseded request clobbering a newer one's
   // result. The worker replies in the order it receives requests today
@@ -257,6 +296,12 @@ export default function App() {
           sort<span>.</span>
         </div>
         <div className="label">algorithm visualizer</div>
+        <AudioToggle
+          enabled={audioOn}
+          volume={volume}
+          onToggle={() => setAudioOn((v) => !v)}
+          onVolume={setVolume}
+        />
         <div className="mode">
           <button aria-pressed={mode === 'builtin'} onClick={() => setMode('builtin')}>
             library
