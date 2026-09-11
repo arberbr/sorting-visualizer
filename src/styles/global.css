@@ -1,0 +1,234 @@
+@import './tokens.css';
+@import './components.css';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Numbers are mono and tabular so climbing counters never shift the layout. */
+.mono,
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--c-muted);
+}
+
+.panel {
+  background: var(--c-surface);
+  border: var(--hairline);
+  border-radius: var(--radius);
+}
+
+button {
+  font: inherit;
+  color: var(--c-text);
+  background: var(--c-surface-alt);
+  border: var(--hairline);
+  border-radius: var(--radius);
+  height: var(--control-height);
+  padding: 0 var(--space-3);
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--c-accent);
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+button[aria-pressed='true'] {
+  border-color: var(--c-accent);
+  color: var(--c-accent);
+}
+
+select,
+input[type='number'],
+input[type='text'] {
+  font-family: var(--font-mono);
+  font-size: var(--fs-small);
+  color: var(--c-text);
+  background: var(--c-bg);
+  border: var(--hairline);
+  border-radius: var(--radius);
+  height: var(--control-height);
+  padding: 0 var(--space-2);
+}
+
+input[type='range'] {
+  accent-color: var(--c-accent);
+  width: 100%;
+}
+
+:focus-visible {
+  outline: 2px solid var(--c-accent);
+  outline-offset: 1px;
+}
+
+/* The app shell: a fixed left rail, the stage, and a right inspector. */
+.app {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr) 320px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    'head head head'
+    'rail stage inspector'
+    'rail controls inspector';
+  height: 100%;
+}
+
+.app__head {
+  grid-area: head;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  min-height: 48px;
+  padding: var(--space-2) var(--space-4);
+  border-bottom: var(--hairline);
+}
+
+.app__rail {
+  grid-area: rail;
+  overflow-y: auto;
+  border-right: var(--hairline);
+}
+
+.app__stage {
+  grid-area: stage;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+}
+
+.app__controls {
+  grid-area: controls;
+  border-top: var(--hairline);
+  padding: var(--space-3) var(--space-4);
+}
+
+.app__inspector {
+  grid-area: inspector;
+  overflow-y: auto;
+  border-left: var(--hairline);
+}
+
+.wordmark {
+  font-family: var(--font-mono);
+  font-size: var(--fs-lead);
+  letter-spacing: -0.02em;
+}
+
+.wordmark span {
+  color: var(--c-accent);
+}
+
+/* Below 1100px the inspector drops under the stage instead of beside it,
+   turning 3 logical row-areas into 4. The base `grid-template-rows` only
+   declares 3 tracks, so without an explicit 4th track here the inspector
+   lands in an implicit `auto` row sized to its own max-content — in custom
+   mode, ApiReference's long list makes that upwards of 1000px. Since the
+   stage row's `minmax(0, 1fr)` has a floor of 0, it absorbs that entire
+   squeeze and the canvas collapses to 0px height. Explicit 4 tracks fix
+   it: the stage gets a real floor so it always has a usable canvas height,
+   and the inspector is capped (its own `overflow-y: auto` already makes a
+   capped track scrollable) so it can never again starve the stage. */
+@media (max-width: 1100px) {
+  .app {
+    grid-template-columns: 220px minmax(0, 1fr);
+    grid-template-rows: auto minmax(260px, 1fr) auto minmax(0, 32vh);
+    grid-template-areas:
+      'head head'
+      'rail stage'
+      'rail controls'
+      'inspector inspector';
+  }
+
+  .app__inspector {
+    border-left: none;
+    border-top: var(--hairline);
+  }
+}
+
+/* The transport bar's fixed 180px speed column plus its auto-sized button
+   row leaves the middle `minmax(0, 1fr)` scrub column whatever's left over.
+   That squeeze is bad enough to cause genuine horizontal overflow below
+   750px, and stays a barely-usable sliver up to ~1000px (measured ~23-43px
+   at 800-820px, ~136px at 900px, ~236px at 1000px, rail fixed at 220px
+   throughout). It then gets WORSE, not better, crossing 1100px: that's
+   where the inspector stops sitting below the stage and becomes a second
+   fixed-width (320px) column beside it (see the 1100px breakpoint above),
+   so the stage column actually shrinks at that crossing even though the
+   viewport grew — measured the scrub column collapse to literally 0px at
+   1101-1102px, and it stays under ~230px all the way out to ~1350px. The
+   timeline is the primary way to move through a trace, so it shouldn't be
+   the element that loses when space is tight anywhere in that range —
+   stack the whole transport bar through both squeezed bands, so the scrub
+   row always gets the full row width instead of a leftover sliver. */
+@media (max-width: 1360px) {
+  .controls {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--space-2);
+  }
+
+  .controls__transport {
+    flex-wrap: wrap;
+    row-gap: var(--space-1);
+  }
+}
+
+/* Phone widths: the rail's fixed column stops fitting well before 1100px's
+   own breakpoint kicks in — nothing below reflows it, so at ~375-420px it
+   simply overflows the viewport and the whole page scrolls sideways. Below
+   this width the rail gives up being a column at all and becomes its own
+   full-width, height-capped row above the stage. This is the "usable but
+   reduced" phone layout, not a designed mobile experience: everything still
+   works, nothing is unreachable, it just stacks. */
+@media (max-width: 640px) {
+  .app {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(200px, 50vh) auto auto;
+    grid-template-areas:
+      'head'
+      'rail'
+      'stage'
+      'controls'
+      'inspector';
+  }
+
+  .app__rail {
+    max-height: 40vh;
+    border-right: none;
+    border-bottom: var(--hairline);
+  }
+
+  .app__shortcuts {
+    display: none;
+  }
+}

@@ -91,22 +91,114 @@ src/
 - Consumes: nothing.
 - Produces: a working `npm run dev`, `npm run build`, `npm test`. All later tasks assume `npm test` runs Vitest over `src/**/*.test.ts(x)`.
 
-- [ ] **Step 1: Scaffold the Vite project**
+- [ ] **Step 1: Scaffold by hand (do NOT run `npm create vite`)**
 
-Run in `D:\_CODE\sort`:
+`npm create vite` prompts interactively in a non-empty directory and one of its
+answers deletes existing files — `docs/` and the plan itself live here. Write the
+files directly instead.
 
-```bash
-npm create vite@latest . -- --template react-ts
-npm install
-npm install -D vitest jsdom @testing-library/react @testing-library/jest-dom @testing-library/user-event
-npm install @codemirror/state @codemirror/view @codemirror/lang-javascript @codemirror/theme-one-dark codemirror
+Create `package.json`:
+
+```json
+{
+  "name": "sorting-visualizer",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  }
+}
 ```
 
-If `npm create vite` refuses because the directory is not empty, answer the prompt to continue — `docs/` and `.git/` are expected to be there.
+Create `tsconfig.json`:
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "moduleDetection": "force",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "types": ["vite/client"]
+  },
+  "include": ["src"]
+}
+```
+
+Create `index.html`:
+
+```html
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sorting Visualizer</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+```
+
+Create `src/vite-env.d.ts`:
+
+```ts
+/// <reference types="vite/client" />
+```
+
+Create `src/main.tsx` (Task 13 replaces this):
+
+```tsx
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import App from './App'
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+)
+```
+
+Create `src/App.tsx` (Task 13 replaces this):
+
+```tsx
+export default function App() {
+  return <div>Sorting Visualizer</div>
+}
+```
+
+Then install, pinning nothing beyond what npm resolves:
+
+```bash
+npm install react react-dom
+npm install -D vite @vitejs/plugin-react typescript @types/react @types/react-dom
+npm install -D vitest jsdom @testing-library/react @testing-library/jest-dom @testing-library/user-event
+npm install @codemirror/state @codemirror/view @codemirror/lang-javascript @codemirror/theme-one-dark @codemirror/commands codemirror
+```
 
 - [ ] **Step 2: Configure Vite and Vitest**
 
-Replace `vite.config.ts`:
+Create `vite.config.ts`:
 
 ```ts
 /// <reference types="vitest/config" />
@@ -124,15 +216,7 @@ export default defineConfig({
 })
 ```
 
-Add to `package.json` scripts:
-
-```json
-"test": "vitest run",
-"test:watch": "vitest",
-"typecheck": "tsc --noEmit"
-```
-
-Ensure `tsconfig.json` has `"strict": true`.
+The scripts and `"strict": true` are already in the files written in Step 1.
 
 - [ ] **Step 3: Write the smoke test**
 
@@ -1720,10 +1804,6 @@ const FIXTURES: ReadonlyArray<{ name: string; input: number[] }> = [
 const DISTS: Distribution[] = ['random', 'nearly-sorted', 'reversed', 'few-unique', 'gaussian']
 
 describe('every registered algorithm', () => {
-  it('registers at least 28 algorithms', () => {
-    expect(ALGORITHMS.length).toBeGreaterThanOrEqual(28)
-  })
-
   it('has unique ids', () => {
     const ids = ALGORITHMS.map((a) => a.meta.id)
     expect(new Set(ids).size).toBe(ids.length)
@@ -1784,7 +1864,8 @@ describe('every registered algorithm', () => {
 })
 ```
 
-Note: the `>= 28` assertion fails until Task 10 lands. That is intentional — it is the plan's own completeness check. Until then, run the suite with `-t` filters or accept the single known failure and keep the rest green.
+The harness has no total-count assertion: coverage is checked once, in Task 10, so
+every task from here on leaves a fully green suite.
 
 - [ ] **Step 8: Implement the exchange family**
 
@@ -2023,7 +2104,7 @@ export function sort(a: TrackedArray): void {
 - [ ] **Step 9: Run the conformance harness**
 
 Run: `npx vitest run src/algorithms/`
-Expected: every per-algorithm test passes for the 6 exchange algorithms. The `>= 28` count assertion fails — expected until Task 10.
+Expected: all tests pass — every per-algorithm test for the 6 exchange algorithms, and the whole suite green.
 
 - [ ] **Step 10: Commit**
 
@@ -2046,8 +2127,10 @@ git commit -m "feat(algorithms): add registry, conformance harness, and exchange
 
 - [ ] **Step 1: Confirm the harness is watching**
 
-Run: `npx vitest run src/algorithms/ -t 'registers at least'`
-Expected: FAIL with a count below 28. This is the signal the harness will pick up new files automatically.
+Run: `npx vitest run src/algorithms/`
+Expected: PASS, with per-algorithm blocks for exactly the 6 exchange algorithms.
+Note the block count — it must grow by 7 once this task's files land, which is
+how you know the registry picks up new files automatically.
 
 - [ ] **Step 2: Implement insertion sort**
 
@@ -2340,7 +2423,7 @@ export function sort(a: TrackedArray): void {
 - [ ] **Step 9: Run the conformance harness**
 
 Run: `npx vitest run src/algorithms/`
-Expected: all per-algorithm tests pass for 13 algorithms. The `>= 28` assertion still fails.
+Expected: all tests pass, with per-algorithm blocks for 13 algorithms.
 
 - [ ] **Step 10: Commit**
 
@@ -3176,7 +3259,7 @@ This task takes the registry past 28, so the conformance count assertion turns g
 
 **Files:**
 - Create: `src/algorithms/impl/bitonic.ts`, `tree.ts`, `strand.ts`, `bogo.ts`, `stooge.ts`
-- Test: covered by `src/algorithms/conformance.test.ts`
+- Test: `src/algorithms/coverage.test.ts` (new), plus the existing `src/algorithms/conformance.test.ts`
 
 **Interfaces:**
 - Consumes: `AlgorithmMeta`, `TrackedArray`.
@@ -3460,18 +3543,61 @@ export function sort(a: TrackedArray): void {
 }
 ```
 
-- [ ] **Step 6: Run the full conformance harness**
+- [ ] **Step 6: Add the coverage test**
+
+The registry is complete now, so this is the moment the total is worth asserting.
+Create `src/algorithms/coverage.test.ts`:
+
+```ts
+import { describe, it, expect } from 'vitest'
+import { ALGORITHMS, algorithmsByFamily } from './index'
+import { FAMILY_ORDER } from './families'
+
+describe('algorithm coverage', () => {
+  it('registers at least 28 algorithms', () => {
+    expect(ALGORITHMS.length).toBeGreaterThanOrEqual(28)
+  })
+
+  it('populates every family', () => {
+    expect(algorithmsByFamily().map((g) => g.family)).toEqual(FAMILY_ORDER)
+  })
+
+  it('includes the algorithms the spec names explicitly', () => {
+    const ids = new Set(ALGORITHMS.map((a) => a.meta.id))
+    for (const id of [
+      'bubble', 'cocktail', 'odd-even', 'gnome', 'comb', 'pancake',
+      'insertion', 'binary-insertion', 'shell', 'cycle',
+      'selection', 'double-selection', 'heap',
+      'merge-top-down', 'merge-bottom-up', 'quick-lomuto', 'quick-hoare',
+      'quick-three-way', 'quick-median3', 'introsort', 'timsort',
+      'counting', 'radix-lsd', 'radix-msd', 'bucket', 'pigeonhole',
+      'bitonic', 'tree', 'strand', 'bogo', 'stooge',
+    ]) {
+      expect(ids, `missing algorithm: ${id}`).toContain(id)
+    }
+  })
+
+  it('caps the algorithms that would otherwise never finish', () => {
+    for (const id of ['bogo', 'stooge']) {
+      const algo = ALGORITHMS.find((a) => a.meta.id === id)!
+      expect(algo.meta.maxN, id).toBeGreaterThan(0)
+    }
+  })
+})
+```
+
+- [ ] **Step 7: Run the full conformance harness**
 
 Run: `npx vitest run src/algorithms/`
-Expected: **all tests pass, including `registers at least 28 algorithms`** (31 registered).
+Expected: **all tests pass, including the new coverage test** (31 registered).
 
 Run: `npm run typecheck`
 Expected: no errors.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
-git add src/algorithms/impl
+git add src/algorithms
 git commit -m "feat(algorithms): add networks, trees, and curiosities — 31 total"
 ```
 
@@ -4243,7 +4369,7 @@ One source of truth for color: `theme.ts` holds the palette, and `applyTheme` wr
 **Files:**
 - Create: `src/render/theme.ts`, `src/styles/tokens.css`, `src/styles/global.css`
 - Modify: `index.html` (fonts, title), `src/main.tsx`, `src/App.tsx`
-- Delete: `src/App.css`, `src/index.css`, `src/assets/` (Vite template leftovers)
+- Delete: `src/App.css`, `src/index.css`, `src/assets/` (Vite template leftovers, if present)
 - Test: `src/render/theme.test.ts`
 
 **Interfaces:**
@@ -4605,7 +4731,8 @@ export default function App() {
 }
 ```
 
-Delete the Vite template leftovers:
+Delete any Vite template leftovers. Task 1 scaffolded by hand, so these usually do
+not exist — the command is a no-op in that case, which is fine:
 
 ```bash
 rm -f src/App.css src/index.css
@@ -6539,7 +6666,7 @@ In `src/App.tsx`:
 ```tsx
 import ApiReference from './components/ApiReference'
 import CodePanel from './components/CodePanel'
-import { DEFAULT_SOURCE, loadDraft, saveDraft } from './customCode'
+import { loadDraft, saveDraft } from './customCode'
 ```
 
 2. Add state next to the existing state:
@@ -6646,7 +6773,10 @@ and in the inspector:
 </aside>
 ```
 
-Also hide the algorithm picker in custom mode by wrapping it: `{mode === 'builtin' && <AlgorithmPicker … />}`. Keep `DEFAULT_SOURCE` imported for the reset affordance if you add one.
+Also hide the algorithm picker in custom mode by wrapping it: `{mode === 'builtin' && <AlgorithmPicker … />}`.
+
+`tsconfig` sets `noUnusedLocals`, so import only what you actually render — do not
+import `DEFAULT_SOURCE` here unless you add a reset button that uses it.
 
 - [ ] **Step 10: Run the tests**
 
@@ -7160,7 +7290,7 @@ git commit -m "feat(race): add synchronized multi-algorithm race mode"
 
 **Files:**
 - Create: `src/audio/pitch.ts`, `src/audio/sonifier.ts`, `src/components/AudioToggle.tsx`
-- Modify: `src/App.tsx`, `src/player/usePlayer.ts` (emit sonification events)
+- Modify: `src/App.tsx` (subscribes to engine frames and plays the notes)
 - Test: `src/audio/pitch.test.ts`
 
 **Interfaces:**
@@ -7667,7 +7797,7 @@ npm run typecheck
 npm run build
 ```
 
-Expected: all tests pass (including `registers at least 28 algorithms`), no type errors, a clean production build.
+Expected: all tests pass (including `src/algorithms/coverage.test.ts`), no type errors, a clean production build.
 
 Then `npm run preview` and walk the acceptance list one final time:
 

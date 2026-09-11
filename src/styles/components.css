@@ -1,0 +1,361 @@
+.picker__group {
+  padding: var(--space-3) 0;
+  border-bottom: var(--hairline);
+}
+
+.picker__label {
+  padding: 0 var(--space-4) var(--space-2);
+}
+
+.picker__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.picker__item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  height: 28px;
+  padding: 0 var(--space-4);
+  background: none;
+  border: none;
+  border-left: 2px solid transparent;
+  border-radius: 0;
+  text-align: left;
+}
+
+.picker__item:hover {
+  background: var(--c-surface);
+}
+
+.picker__item[aria-pressed='true'] {
+  background: var(--c-surface);
+  border-left-color: var(--c-accent);
+}
+
+.picker__name {
+  overflow: hidden;
+  min-width: 0;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.picker__badge {
+  flex: none;
+  font-size: var(--fs-micro);
+  color: var(--c-muted);
+}
+
+.config {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-bottom: var(--hairline);
+}
+
+.config__row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.config__warn {
+  margin: 0;
+  font-size: var(--fs-small);
+  color: var(--c-compare);
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 180px;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.controls__transport {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.controls__position {
+  margin-left: var(--space-3);
+  font-size: var(--fs-small);
+  color: var(--c-muted);
+}
+
+.controls__scrub,
+.controls__speed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.inspector__block {
+  padding: var(--space-4);
+  border-bottom: var(--hairline);
+}
+
+.inspector__name {
+  margin: var(--space-2) 0;
+  font-size: var(--fs-display);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.inspector__desc {
+  margin: 0 0 var(--space-3);
+  color: var(--c-muted);
+  line-height: 1.5;
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+}
+
+.grid2 dt {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--c-muted);
+}
+
+.grid2 dd {
+  margin: 0;
+}
+
+.readout dd {
+  font-size: var(--fs-lead);
+}
+
+.chips {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.chip {
+  display: inline-block;
+  padding: 2px var(--space-2);
+  border: var(--hairline);
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--c-muted);
+}
+
+.chip--ok {
+  color: var(--c-sorted);
+  border-color: var(--c-sorted);
+}
+
+.chip--bad {
+  color: var(--c-danger);
+  border-color: var(--c-danger);
+}
+
+.banner {
+  position: absolute;
+  inset: var(--space-4) var(--space-4) auto;
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--c-surface);
+  border: 1px solid var(--c-danger);
+  border-radius: var(--radius);
+}
+
+.banner__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.banner__code {
+  color: var(--c-danger);
+}
+
+.banner__detail {
+  min-width: 0;
+  font-size: var(--fs-small);
+  color: var(--c-muted);
+  overflow-wrap: anywhere;
+}
+
+.mode {
+  display: flex;
+  gap: var(--space-1);
+  margin-left: auto;
+}
+
+.app__stage--split {
+  display: grid;
+  /* Both rows get an explicit floor — previously the canvas row had none
+     (`minmax(0, 1fr)`), so whenever the outer stage track itself got
+     squeezed (e.g. under 1100px, see global.css), the code panel's own
+     220px floor claimed space first and the canvas was left with whatever
+     was left, down to 0. A floor on both means neither can fully starve
+     the other; the code editor still scrolls internally past its floor. */
+  grid-template-rows: minmax(160px, 1fr) minmax(160px, 40%);
+}
+
+.codepanel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border-top: var(--hairline);
+}
+
+.codepanel__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: var(--hairline);
+}
+
+.codepanel__bar button {
+  margin-left: auto;
+}
+
+.codepanel__error {
+  overflow: hidden;
+  min-width: 0;
+  flex: 1 1 auto;
+  color: var(--c-danger);
+  font-size: var(--fs-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
+
+.api {
+  margin: 0;
+}
+
+.api__row {
+  padding: var(--space-2) 0;
+  border-bottom: var(--hairline);
+}
+
+.api__sig {
+  font-size: var(--fs-small);
+  color: var(--c-accent);
+}
+
+.api__desc {
+  margin: var(--space-1) 0 0;
+  color: var(--c-muted);
+  line-height: 1.5;
+}
+
+.race {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  height: 100%;
+  grid-template-columns: 1fr 1fr;
+}
+
+.race[data-lanes='2'] {
+  grid-template-rows: 1fr;
+}
+
+.race[data-lanes='3'],
+.race[data-lanes='4'] {
+  grid-template-rows: 1fr 1fr;
+}
+
+.race__lane {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  min-width: 0;
+}
+
+.race__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: var(--hairline);
+}
+
+.race__name {
+  font-family: var(--font-mono);
+  font-size: var(--fs-small);
+}
+
+.race__stats {
+  font-size: var(--fs-micro);
+  color: var(--c-muted);
+}
+
+.race__plot {
+  min-height: 0;
+  min-width: 0;
+}
+
+.race-lanes__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.race-lanes__row select {
+  flex: 1;
+  min-width: 0;
+}
+
+.audio {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.audio input[type='range'] {
+  width: 80px;
+}
+
+/* Below 900px `.race` drops to a single column, but the `[data-lanes]`
+   rules above still declare row counts sized for a 2-column layout (2
+   lanes = 1 row, 3-4 lanes = 2 rows) — with only 1 column now, that leaves
+   the 2nd (or 3rd/4th) lane with no explicit row to land in, so it falls
+   into an implicit, content-sized row while its siblings get squeezed
+   toward 0. Matching specificity is required to win over `[data-lanes]`:
+   `grid-template-rows: none` clears their row template so every lane
+   becomes an implicit row, and `grid-auto-rows: 1fr` makes all of those
+   implicit rows share the available height evenly, whatever the lane
+   count. */
+@media (max-width: 900px) {
+  .race {
+    grid-template-columns: 1fr;
+  }
+
+  .race[data-lanes='2'],
+  .race[data-lanes='3'],
+  .race[data-lanes='4'] {
+    grid-template-rows: none;
+    grid-auto-rows: 1fr;
+  }
+}
