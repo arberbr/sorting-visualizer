@@ -1,9 +1,9 @@
-import { describe, it, expect } from 'vitest'
-import { RaceEngine } from './raceEngine'
-import { PlayerEngine } from './engine'
-import { runSort } from '../core/runner'
+import { describe, expect, it } from 'vitest'
 import { getAlgorithm } from '../algorithms'
 import { generate } from '../core/generate'
+import { runSort } from '../core/runner'
+import { PlayerEngine } from './engine'
+import { RaceEngine } from './raceEngine'
 
 const laneFor = (id: string, input: number[]) => {
   const r = runSort(getAlgorithm(id)!.sort, input)

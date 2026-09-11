@@ -32,7 +32,7 @@
   background: var(--c-surface);
 }
 
-.picker__item[aria-pressed='true'] {
+.picker__item[aria-pressed="true"] {
   background: var(--c-surface);
   border-left-color: var(--c-accent);
 }
@@ -276,12 +276,12 @@
   grid-template-columns: 1fr 1fr;
 }
 
-.race[data-lanes='2'] {
+.race[data-lanes="2"] {
   grid-template-rows: 1fr;
 }
 
-.race[data-lanes='3'],
-.race[data-lanes='4'] {
+.race[data-lanes="3"],
+.race[data-lanes="4"] {
   grid-template-rows: 1fr 1fr;
 }
 
@@ -333,7 +333,7 @@
   gap: var(--space-2);
 }
 
-.audio input[type='range'] {
+.audio input[type="range"] {
   width: 80px;
 }
 
@@ -352,9 +352,9 @@
     grid-template-columns: 1fr;
   }
 
-  .race[data-lanes='2'],
-  .race[data-lanes='3'],
-  .race[data-lanes='4'] {
+  .race[data-lanes="2"],
+  .race[data-lanes="3"],
+  .race[data-lanes="4"] {
     grid-template-rows: none;
     grid-auto-rows: 1fr;
   }

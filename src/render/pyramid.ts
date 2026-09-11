@@ -1,4 +1,4 @@
-import { barMetrics, elementColor, splitLanes, type Renderer } from './layout'
+import { barMetrics, elementColor, type Renderer, splitLanes } from './layout'
 
 /** Bars centred vertically, growing in both directions — disorder reads as jaggedness. */
 export const drawPyramid: Renderer = (ctx, frame, theme, size) => {

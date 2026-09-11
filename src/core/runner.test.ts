@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { runSort } from './runner'
-import { checkSorted } from './verify'
 import type { TrackedArray } from './trackedArray'
+import { checkSorted } from './verify'
 
 const bubble = (a: TrackedArray) => {
   for (let i = 0; i < a.length; i++) {

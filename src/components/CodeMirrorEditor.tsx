@@ -1,10 +1,10 @@
-import { useEffect, useRef } from 'react'
-import { EditorState } from '@codemirror/state'
-import { EditorView, keymap } from '@codemirror/view'
 import { indentWithTab } from '@codemirror/commands'
 import { javascript } from '@codemirror/lang-javascript'
+import { EditorState } from '@codemirror/state'
 import { oneDark } from '@codemirror/theme-one-dark'
+import { EditorView, keymap } from '@codemirror/view'
 import { basicSetup } from 'codemirror'
+import { useEffect, useRef } from 'react'
 
 interface Props {
   value: string
@@ -21,6 +21,11 @@ export default function CodeMirrorEditor({ value, onChange }: Props) {
   const onChangeRef = useRef(onChange)
   onChangeRef.current = onChange
 
+  // Mounts once on purpose. `value` only seeds the initial document; re-running
+  // would destroy and rebuild the editor, losing the cursor, selection and undo
+  // history on every keystroke. Later external changes are applied by the
+  // effect below, which diffs against the live document.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: mount-once by design, see above
   useEffect(() => {
     const view = new EditorView({
       parent: hostRef.current!,

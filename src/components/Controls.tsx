@@ -28,19 +28,39 @@ export default function Controls({
   return (
     <div className="controls">
       <div className="controls__transport">
-        <button onClick={() => onSeek(0)} disabled={disabled} aria-label="Jump to start">
+        <button
+          type="button"
+          onClick={() => onSeek(0)}
+          disabled={disabled}
+          aria-label="Jump to start"
+        >
           |◀
         </button>
-        <button onClick={() => onStep(-1)} disabled={disabled} aria-label="Step back">
+        <button type="button" onClick={() => onStep(-1)} disabled={disabled} aria-label="Step back">
           ◀
         </button>
-        <button onClick={onToggle} disabled={disabled} aria-label={playing ? 'Pause' : 'Play'}>
+        <button
+          type="button"
+          onClick={onToggle}
+          disabled={disabled}
+          aria-label={playing ? 'Pause' : 'Play'}
+        >
           {playing ? '❚❚ pause' : '▶ play'}
         </button>
-        <button onClick={() => onStep(1)} disabled={disabled} aria-label="Step forward">
+        <button
+          type="button"
+          onClick={() => onStep(1)}
+          disabled={disabled}
+          aria-label="Step forward"
+        >
           ▶
         </button>
-        <button onClick={() => onSeek(total)} disabled={disabled} aria-label="Jump to end">
+        <button
+          type="button"
+          onClick={() => onSeek(total)}
+          disabled={disabled}
+          aria-label="Jump to end"
+        >
           ▶|
         </button>
         <span className="num controls__position" data-testid="position">

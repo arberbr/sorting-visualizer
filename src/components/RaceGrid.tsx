@@ -40,7 +40,10 @@ export default function RaceGrid({ race, style, theme }: Props) {
         // width-only check would then skip the resize entirely, leaving the
         // canvas's old, too-tall backing store and CSS height in place — it
         // would visually overflow into the grid row below it.
-        if (canvas.width !== Math.round(width * dpr) || canvas.height !== Math.round(height * dpr)) {
+        if (
+          canvas.width !== Math.round(width * dpr) ||
+          canvas.height !== Math.round(height * dpr)
+        ) {
           canvas.width = Math.round(width * dpr)
           canvas.height = Math.round(height * dpr)
           canvas.style.width = `${width}px`

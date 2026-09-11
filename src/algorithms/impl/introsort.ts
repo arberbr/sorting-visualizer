@@ -1,5 +1,5 @@
-import type { AlgorithmMeta } from '../../core/types'
 import type { TrackedArray } from '../../core/trackedArray'
+import type { AlgorithmMeta } from '../../core/types'
 
 export const meta: AlgorithmMeta = {
   id: 'introsort',
@@ -12,7 +12,7 @@ export const meta: AlgorithmMeta = {
   stable: false,
   inPlace: true,
   description:
-    "Quicksort until the recursion gets too deep, then heapsort for that subrange, then insertion sort for small ranges. This hybrid is what most C++ standard libraries actually ship as std::sort.",
+    'Quicksort until the recursion gets too deep, then heapsort for that subrange, then insertion sort for small ranges. This hybrid is what most C++ standard libraries actually ship as std::sort.',
 }
 
 export function sort(a: TrackedArray): void {

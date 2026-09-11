@@ -8,7 +8,7 @@ interface Props {
 export default function AudioToggle({ enabled, volume, onToggle, onVolume }: Props) {
   return (
     <div className="audio">
-      <button aria-pressed={enabled} onClick={onToggle} aria-label="Toggle sound">
+      <button type="button" aria-pressed={enabled} onClick={onToggle} aria-label="Toggle sound">
         {enabled ? '\u{1F50A} sound' : '\u{1F508} muted'}
       </button>
       <input

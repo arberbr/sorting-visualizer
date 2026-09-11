@@ -1,5 +1,5 @@
-import type { AlgorithmMeta } from '../../core/types'
 import type { TrackedArray } from '../../core/trackedArray'
+import type { AlgorithmMeta } from '../../core/types'
 
 export const meta: AlgorithmMeta = {
   id: 'selection',

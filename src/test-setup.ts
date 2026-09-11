@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/vitest'
-import { afterEach } from 'vitest'
 import { cleanup } from '@testing-library/react'
+import { afterEach } from 'vitest'
 
 // Vitest is configured with `globals: false`, so testing-library's automatic
 // afterEach(cleanup) — which only registers itself when it can see a global

@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest'
-import { API_ENTRIES } from './apiEntries'
+import { describe, expect, it } from 'vitest'
 import { TrackedArray } from '../core/trackedArray'
+import { API_ENTRIES } from './apiEntries'
 
 /** The reference panel is the user's only contract. Drift here is a real bug. */
 describe('API_ENTRIES', () => {

@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from 'vitest'
+
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { describe, expect, it, vi } from 'vitest'
 import ErrorBanner from './ErrorBanner'
 
 describe('ErrorBanner', () => {
@@ -13,7 +14,11 @@ describe('ErrorBanner', () => {
   it('explains a step-budget failure as a likely infinite loop', () => {
     render(
       <ErrorBanner
-        error={{ code: 'step-budget', message: 'Exceeded the 2000000 step limit', limit: 2_000_000 }}
+        error={{
+          code: 'step-budget',
+          message: 'Exceeded the 2000000 step limit',
+          limit: 2_000_000,
+        }}
         onDismiss={() => {}}
       />,
     )

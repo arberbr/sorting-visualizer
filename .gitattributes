@@ -1,0 +1,9 @@
+# Keep the working tree LF everywhere so Biome agrees with CI on Linux.
+# Without this, Windows checks out CRLF and every file reads as unformatted.
+* text=auto eol=lf
+
+# Binary-ish assets should never be touched.
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff2 binary

@@ -1,8 +1,8 @@
-import { describe, it, expect, vi } from 'vitest'
-import { PlayerEngine } from './engine'
-import { runSort } from '../core/runner'
+import { describe, expect, it, vi } from 'vitest'
 import { getAlgorithm } from '../algorithms'
 import { generate } from '../core/generate'
+import { runSort } from '../core/runner'
+import { PlayerEngine } from './engine'
 
 const trace = () => {
   const algo = getAlgorithm('insertion')!

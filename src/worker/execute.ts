@@ -1,6 +1,6 @@
 import { getAlgorithm } from '../algorithms'
 import { DEFAULT_LIMITS } from '../core/limits'
-import { runSort, type RunResult } from '../core/runner'
+import { type RunResult, runSort } from '../core/runner'
 import { compileCustom, WRAPPER_LINE_OFFSET } from './compile'
 import type { RunRequest } from './protocol'
 

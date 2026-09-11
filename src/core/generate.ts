@@ -41,7 +41,7 @@ export const LARGE_N_WARNING = 400
 
 /** mulberry32 — small, fast, and good enough for shuffling bars. */
 export function makeRng(seed: number): () => number {
-  let a = (seed >>> 0) || 1
+  let a = seed >>> 0 || 1
   return () => {
     a = (a + 0x6d2b79f5) >>> 0
     let t = Math.imul(a ^ (a >>> 15), 1 | a)

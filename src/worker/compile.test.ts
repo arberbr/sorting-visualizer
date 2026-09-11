@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest'
-import { compileCustom } from './compile'
+import { describe, expect, it } from 'vitest'
 import { runSort } from '../core/runner'
+import { compileCustom } from './compile'
 
 describe('compileCustom', () => {
   it('compiles a function named sort and it actually sorts', () => {

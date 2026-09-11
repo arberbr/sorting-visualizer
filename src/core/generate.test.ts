@@ -1,12 +1,12 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
   DISTRIBUTIONS,
+  type Distribution,
   generate,
-  makeRng,
   MAX_N,
   MIN_N,
+  makeRng,
   RACE_MAX_N,
-  type Distribution,
 } from './generate'
 
 describe('makeRng', () => {
@@ -66,8 +66,7 @@ describe('generate', () => {
   it('nearly-sorted has far fewer inversions than random', () => {
     const inversions = (a: number[]) => {
       let c = 0
-      for (let i = 0; i < a.length; i++)
-        for (let j = i + 1; j < a.length; j++) if (a[i] > a[j]) c++
+      for (let i = 0; i < a.length; i++) for (let j = i + 1; j < a.length; j++) if (a[i] > a[j]) c++
       return c
     }
     expect(inversions(generate(80, 'nearly-sorted', 3))).toBeLessThan(

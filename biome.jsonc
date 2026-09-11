@@ -1,0 +1,51 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.13/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    // `docs/` holds the design spec and implementation plan — prose, not source.
+    "includes": ["**", "!dist", "!docs"]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "style": {
+        // This codebase uses `!` where nullability is structurally guaranteed:
+        // a ref read inside the effect that just populated it, or a registry
+        // lookup by an id that came from that same registry. Rewriting those 30
+        // sites as runtime guards would add branches to per-frame render loops
+        // to restate invariants the surrounding code already establishes.
+        // Turned off deliberately rather than left as 30 standing warnings,
+        // which would train everyone to ignore Biome's output.
+        "noNonNullAssertion": "off"
+      }
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "semicolons": "asNeeded",
+      "quoteStyle": "single",
+      "jsxQuoteStyle": "double",
+      "trailingCommas": "all",
+      "arrowParentheses": "always",
+      "bracketSpacing": true
+    }
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  }
+}

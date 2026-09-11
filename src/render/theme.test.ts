@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect } from 'vitest'
-import { DARK, applyTheme, cssVarName } from './theme'
+import { describe, expect, it } from 'vitest'
+import { applyTheme, cssVarName, DARK } from './theme'
 
 describe('theme', () => {
   it('names variables predictably', () => {

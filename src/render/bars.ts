@@ -1,4 +1,4 @@
-import { barMetrics, elementColor, splitLanes, type Renderer } from './layout'
+import { barMetrics, elementColor, type Renderer, splitLanes } from './layout'
 
 export const drawBars: Renderer = (ctx, frame, theme, size) => {
   ctx.clearRect(0, 0, size.width, size.height)

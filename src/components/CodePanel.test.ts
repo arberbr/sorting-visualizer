@@ -1,8 +1,8 @@
-import { describe, it, expect } from 'vitest'
-import { toPlainJs } from '../algorithms/toPlainJs'
+import { describe, expect, it } from 'vitest'
 import { ALGORITHMS, getAlgorithm } from '../algorithms'
-import { compileCustom } from '../worker/compile'
+import { toPlainJs } from '../algorithms/toPlainJs'
 import { runSort } from '../core/runner'
+import { compileCustom } from '../worker/compile'
 
 /**
  * `toPlainJs` strips TypeScript so a built-in's source can be loaded into the

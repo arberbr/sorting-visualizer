@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest'
-import { TrackedArray } from './trackedArray'
+import { describe, expect, it } from 'vitest'
 import { Budget, LimitError } from './limits'
+import { TrackedArray } from './trackedArray'
 
 const budget = () => new Budget({ maxSteps: 1000, maxMillis: 10_000 })
 

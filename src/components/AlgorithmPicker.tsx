@@ -15,6 +15,7 @@ export default function AlgorithmPicker({ selectedId, onSelect }: Props) {
             {group.items.map((algo) => (
               <li key={algo.meta.id}>
                 <button
+                  type="button"
                   className="picker__item"
                   aria-pressed={algo.meta.id === selectedId}
                   onClick={() => onSelect(algo.meta.id)}

@@ -37,6 +37,10 @@ export function useRace(inputs: readonly RaceInput[]) {
   const lastUiUpdate = useRef(0)
 
   // A new set of lanes resets the transport.
+  // `race` is the
+  // trigger, not a value the body reads. Dropping it would leave the shared
+  // index pointing into the previous set of lanes.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: see the comment above
   useEffect(() => {
     setIndexState(0)
     setPlaying(false)

@@ -1,4 +1,4 @@
-import { DISTRIBUTIONS, LARGE_N_WARNING, MAX_N, MIN_N, type Distribution } from '../core/generate'
+import { DISTRIBUTIONS, type Distribution, LARGE_N_WARNING, MAX_N, MIN_N } from '../core/generate'
 import { RENDERERS, type RenderStyle } from '../render'
 
 /**
@@ -52,14 +52,14 @@ export default function ArrayConfig({
       </label>
       {sizeCap < MAX_N ? (
         <p className="config__warn">
-          Racing is capped at {sizeCap} elements: every lane keeps its own full trace of
-          every operation it performs, so four lanes hold four traces at once.
+          Racing is capped at {sizeCap} elements: every lane keeps its own full trace of every
+          operation it performs, so four lanes hold four traces at once.
         </p>
       ) : (
         settings.size > LARGE_N_WARNING && (
           <p className="config__warn">
-            Above {LARGE_N_WARNING} elements, traces take longer to compute and bars
-            become sub-pixel and hard to read.
+            Above {LARGE_N_WARNING} elements, traces take longer to compute and bars become
+            sub-pixel and hard to read.
           </p>
         )
       )}
@@ -104,7 +104,7 @@ export default function ArrayConfig({
         </select>
       </label>
 
-      <button onClick={onRegenerate} disabled={busy}>
+      <button type="button" onClick={onRegenerate} disabled={busy}>
         {busy ? 'running…' : 'regenerate & run'}
       </button>
     </div>

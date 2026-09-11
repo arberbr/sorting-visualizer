@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest'
-import { runSort } from './runner'
-import { buildKeyframes, stateAt } from './keyframes'
+import { describe, expect, it } from 'vitest'
 import { applyStep, createInitialState, type FrameState } from './frame'
+import { buildKeyframes, stateAt } from './keyframes'
+import { runSort } from './runner'
 import type { TrackedArray } from './trackedArray'
 
 const bubble = (a: TrackedArray) => {
@@ -171,8 +171,22 @@ describe('stateAt (full FrameState parity across keyframe boundaries)', () => {
 
   it('also holds with a small custom keyframe interval', () => {
     const trace = mergeTraceOf(120)
-    const withTightKeyframes = { ...trace, keyframes: buildKeyframes(trace.input, trace.steps, trace.auxLength, 37) }
-    const picks = [0, 1, 36, 37, 38, 73, 74, 75, Math.floor(trace.steps.length / 2), trace.steps.length]
+    const withTightKeyframes = {
+      ...trace,
+      keyframes: buildKeyframes(trace.input, trace.steps, trace.auxLength, 37),
+    }
+    const picks = [
+      0,
+      1,
+      36,
+      37,
+      38,
+      73,
+      74,
+      75,
+      Math.floor(trace.steps.length / 2),
+      trace.steps.length,
+    ]
 
     for (const index of picks) {
       const i = Math.min(index, trace.steps.length)

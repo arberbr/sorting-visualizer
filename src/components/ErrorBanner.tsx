@@ -26,7 +26,7 @@ export default function ErrorBanner({ error, onDismiss }: Props) {
           {error.message}
         </span>
       </div>
-      <button onClick={onDismiss} aria-label="Dismiss error">
+      <button type="button" onClick={onDismiss} aria-label="Dismiss error">
         ×
       </button>
     </div>

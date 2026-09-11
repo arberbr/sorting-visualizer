@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { advance, MAX_STEPS_PER_FRAME } from './timing'
 
 describe('advance', () => {

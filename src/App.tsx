@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ALGORITHMS, getAlgorithm } from './algorithms'
+import { Sonifier } from './audio/sonifier'
 import AlgorithmPicker from './components/AlgorithmPicker'
 import ApiReference from './components/ApiReference'
 import ArrayConfig, { type ArraySettings } from './components/ArrayConfig'
@@ -10,18 +12,16 @@ import ErrorBanner from './components/ErrorBanner'
 import RaceGrid from './components/RaceGrid'
 import Telemetry, {
   formatCount,
+  type Verdict,
   verdictClass,
   verdictLabel,
-  type Verdict,
 } from './components/Telemetry'
-import { ALGORITHMS, getAlgorithm } from './algorithms'
-import { Sonifier } from './audio/sonifier'
-import { loadDraft, saveDraft } from './customCode'
 import { generate, MAX_N, RACE_MAX_N } from './core/generate'
-import { emptyCounts } from './core/types'
 import type { RunError, Trace } from './core/runner'
+import { emptyCounts } from './core/types'
+import { loadDraft, saveDraft } from './customCode'
 import { usePlayer } from './player/usePlayer'
-import { useRace, type RaceInput } from './player/useRace'
+import { type RaceInput, useRace } from './player/useRace'
 import type { RenderStyle } from './render'
 import { DARK } from './render/theme'
 import { useKeyboard } from './useKeyboard'
@@ -100,7 +100,7 @@ export default function App() {
       // compares, then plain reads (the only channel a non-comparison sort
       // ever touches, so without it those algorithms would play silence).
       const at = frame.index - 1
-      const touched = (a: Int32Array) => a.findIndex((t) => t === at)
+      const touched = (a: Int32Array) => a.indexOf(at)
       const i = touched(frame.lastWrite)
       const j = i >= 0 ? i : touched(frame.lastCompare)
       const k = j >= 0 ? j : touched(frame.lastRead)
@@ -326,7 +326,9 @@ export default function App() {
       }, DEBOUNCE_MS)
     }
     return () => clearTimeout(raceWindowTimer.current)
-  }, [mode, raceIds, settings, startRace])
+    // `raceIds` and `settings` are deliberately absent: `startRace` is a
+    // useCallback over both, so it already changes whenever they do.
+  }, [mode, startRace])
 
   // There is exactly one requestAnimationFrame loop per transport
   // (usePlayer's and useRace's), and each only runs while its own `playing`
@@ -336,15 +338,20 @@ export default function App() {
   // (and re-rendering App on every UI-refresh tick) behind an unmounted
   // Canvas. Whichever transport's view isn't currently active gets paused
   // when the mode changes away from it.
+  // `player.pause` is
+  // a fresh arrow on every render, so listing it would re-run this on every
+  // render instead of on a mode change. It only wraps a stable setState, so
+  // capturing a stale one is harmless.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: see the comment above
   useEffect(() => {
     if (mode === 'race') player.pause()
-    // player.pause is a stable setState wrapper; omitted from the deps
-    // deliberately so this fires on a mode change and nothing else.
   }, [mode])
 
+  // same as above, for
+  // raceState.pause.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: see the comment above
   useEffect(() => {
     if (mode !== 'race') raceState.pause()
-    // Same as above, for raceState.pause.
   }, [mode])
 
   // Keyboard transport follows whichever view is on screen: the race
@@ -373,13 +380,17 @@ export default function App() {
           onVolume={setVolume}
         />
         <div className="mode">
-          <button aria-pressed={mode === 'builtin'} onClick={() => setMode('builtin')}>
+          <button
+            type="button"
+            aria-pressed={mode === 'builtin'}
+            onClick={() => setMode('builtin')}
+          >
             library
           </button>
-          <button aria-pressed={mode === 'custom'} onClick={() => setMode('custom')}>
+          <button type="button" aria-pressed={mode === 'custom'} onClick={() => setMode('custom')}>
             your code
           </button>
-          <button aria-pressed={mode === 'race'} onClick={() => setMode('race')}>
+          <button type="button" aria-pressed={mode === 'race'} onClick={() => setMode('race')}>
             race
           </button>
         </div>
@@ -395,12 +406,14 @@ export default function App() {
           onStyleChange={setStyle}
           onRegenerate={() => setSettings((s) => ({ ...s, seed: s.seed + 1 }))}
         />
-        {mode === 'builtin' && <AlgorithmPicker selectedId={algorithmId} onSelect={setAlgorithmId} />}
+        {mode === 'builtin' && (
+          <AlgorithmPicker selectedId={algorithmId} onSelect={setAlgorithmId} />
+        )}
         {mode === 'race' && (
           <div className="config">
             <div className="label">race lanes (2–4)</div>
             {raceIds.map((id, slot) => (
-              <div className="race-lanes__row" key={slot}>
+              <div className="race-lanes__row" key={id}>
                 <select
                   value={id}
                   aria-label={`Lane ${slot + 1}`}
@@ -414,18 +427,19 @@ export default function App() {
                       collide on the same id. RaceEngine/RaceGrid key every
                       lane by that id, so a collision would mean duplicate
                       React keys and two lanes fighting over one canvas. */}
-                  {ALGORITHMS.filter(
-                    (a) => a.meta.id === id || !raceIds.includes(a.meta.id),
-                  ).map((a) => (
-                    <option key={a.meta.id} value={a.meta.id}>
-                      {a.meta.name}
-                    </option>
-                  ))}
+                  {ALGORITHMS.filter((a) => a.meta.id === id || !raceIds.includes(a.meta.id)).map(
+                    (a) => (
+                      <option key={a.meta.id} value={a.meta.id}>
+                        {a.meta.name}
+                      </option>
+                    ),
+                  )}
                 </select>
               </div>
             ))}
             <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
               <button
+                type="button"
                 disabled={raceIds.length >= 4}
                 onClick={() =>
                   setRaceIds((ids) => {
@@ -437,6 +451,7 @@ export default function App() {
                 add lane
               </button>
               <button
+                type="button"
                 disabled={raceIds.length <= 2}
                 onClick={() => setRaceIds((ids) => ids.slice(0, -1))}
               >
@@ -450,9 +465,7 @@ export default function App() {
       <main className={`app__stage${mode === 'custom' ? ' app__stage--split' : ''}`}>
         {mode === 'race' ? (
           <div style={{ position: 'relative', minWidth: 0, minHeight: 0, height: '100%' }}>
-            {raceState.race && (
-              <RaceGrid race={raceState.race} style={style} theme={DARK} />
-            )}
+            {raceState.race && <RaceGrid race={raceState.race} style={style} theme={DARK} />}
             <ErrorBanner error={error} onDismiss={() => setError(null)} />
           </div>
         ) : (
@@ -517,7 +530,9 @@ export default function App() {
                 </div>
                 <div className="readout">
                   <dt>swaps</dt>
-                  <dd className="num">{(player.engine?.frame.counts.swaps ?? 0).toLocaleString()}</dd>
+                  <dd className="num">
+                    {(player.engine?.frame.counts.swaps ?? 0).toLocaleString()}
+                  </dd>
                 </div>
               </dl>
             </section>

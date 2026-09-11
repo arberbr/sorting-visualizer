@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest'
-import { RENDERERS, getRenderer } from './index'
+import { describe, expect, it } from 'vitest'
 import { createInitialState } from '../core/frame'
+import { getRenderer, RENDERERS } from './index'
 import { DARK } from './theme'
 
 /** A minimal 2D context recorder — enough to prove a renderer draws without a browser. */

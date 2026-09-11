@@ -1,10 +1,10 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
+import { applyStep, createInitialState } from '../core/frame'
+import { type Distribution, generate } from '../core/generate'
+import { runSort } from '../core/runner'
+import { compileCustom } from '../worker/compile'
 import { ALGORITHMS } from './index'
 import { toPlainJs } from './toPlainJs'
-import { runSort } from '../core/runner'
-import { applyStep, createInitialState } from '../core/frame'
-import { generate, type Distribution } from '../core/generate'
-import { compileCustom } from '../worker/compile'
 
 const FIXTURES: ReadonlyArray<{ name: string; input: number[] }> = [
   { name: 'empty', input: [] },

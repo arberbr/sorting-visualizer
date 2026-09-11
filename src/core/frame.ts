@@ -1,4 +1,4 @@
-import { assertNever, emptyCounts, type Counts, type Step } from './types'
+import { assertNever, type Counts, emptyCounts, type Step } from './types'
 
 /** Everything a renderer needs to draw one moment of a run. */
 export interface FrameState {

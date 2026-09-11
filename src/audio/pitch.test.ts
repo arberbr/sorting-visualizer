@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { MAX_HZ, MIN_HZ, pitchFor } from './pitch'
 
 describe('pitchFor', () => {

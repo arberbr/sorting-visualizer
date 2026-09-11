@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
+
+import { act, renderHook, waitFor } from '@testing-library/react'
 import React from 'react'
-import { describe, it, expect } from 'vitest'
-import { renderHook, act, waitFor } from '@testing-library/react'
-import { useRunner, type WorkerLike } from './useRunner'
+import { describe, expect, it } from 'vitest'
 import { execute } from './execute'
 import type { RunRequest, RunResponse } from './protocol'
+import { useRunner, type WorkerLike } from './useRunner'
 
 /** A synchronous stand-in for the real Worker, so the hook is testable in jsdom. */
 function fakeWorker(): WorkerLike & { sent: RunRequest[] } {
@@ -62,7 +63,7 @@ describe('useRunner', () => {
     await waitFor(() => expect(result.current.busy).toBe(false))
   })
 
-  it('survives StrictMode\'s dev-only mount -> cleanup -> mount cycle', async () => {
+  it("survives StrictMode's dev-only mount -> cleanup -> mount cycle", async () => {
     // StrictMode double-invokes effects on mount (setup, cleanup, setup again)
     // without an intervening render, so the effect must be able to recreate
     // the worker itself rather than relying on the render-time guard alone.
@@ -134,7 +135,11 @@ describe('useRunner', () => {
    * App produces whenever a race fans 2-4 lanes onto the single FIFO worker, or
    * a debounced leading + trailing dispatch overlap.
    */
-  function deferredWorker(): WorkerLike & { sent: RunRequest[]; terminated: boolean; flush(): void } {
+  function deferredWorker(): WorkerLike & {
+    sent: RunRequest[]
+    terminated: boolean
+    flush(): void
+  } {
     const listeners = new Set<(e: { data: RunResponse }) => void>()
     const queued: RunRequest[] = []
     return {

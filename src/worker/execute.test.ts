@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { execute } from './execute'
 
 describe('execute', () => {
@@ -21,7 +21,8 @@ describe('execute', () => {
     const r = execute({
       id: 2,
       kind: 'custom',
-      source: 'function sort(arr) { for (let i = 0; i < arr.length; i++) for (let j = 0; j + 1 < arr.length; j++) if (arr.compare(j, j+1) > 0) arr.swap(j, j+1) }',
+      source:
+        'function sort(arr) { for (let i = 0; i < arr.length; i++) for (let j = 0; j + 1 < arr.length; j++) if (arr.compare(j, j+1) > 0) arr.swap(j, j+1) }',
       input: [5, 4, 3],
     })
     expect(r.ok).toBe(true)

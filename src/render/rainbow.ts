@@ -1,4 +1,4 @@
-import { barMetrics, heat, splitLanes, type Renderer } from './layout'
+import { barMetrics, heat, type Renderer, splitLanes } from './layout'
 
 /**
  * Hue encodes value, so a sorted array is a clean spectrum sweep and any

@@ -14,6 +14,10 @@ export function usePlayer(trace: Trace | null) {
   const lastUiUpdate = useRef(0)
 
   // A new trace resets the transport.
+  // `engine` is the
+  // trigger, not a value the body reads. Dropping it would leave the transport
+  // pointing at a step index from the previous trace.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: see the comment above
   useEffect(() => {
     setIndexState(0)
     setPlaying(false)

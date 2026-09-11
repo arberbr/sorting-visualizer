@@ -1,8 +1,8 @@
 import { buildKeyframes } from './keyframes'
 import { Budget, DEFAULT_LIMITS, LimitError, type Limits } from './limits'
 import { TrackedArray } from './trackedArray'
-import { checkSorted } from './verify'
 import type { Counts, SortFn, Step } from './types'
+import { checkSorted } from './verify'
 
 export interface Keyframe {
   index: number

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { applyStep, createInitialState } from '../core/frame'
 import { barMetrics, DECAY_STEPS, elementColor, heat, splitLanes } from './layout'
 import { DARK } from './theme'
@@ -59,32 +59,36 @@ describe('heat', () => {
 })
 
 describe('elementColor', () => {
-  const after = (step: Parameters<typeof applyStep>[1]) => {
+  const stateAfter = (step: Parameters<typeof applyStep>[1]) => {
     const s = createInitialState([3, 1, 2], 0)
     applyStep(s, step)
     return s
   }
 
   it('keeps a plain read out of the compare colour', () => {
-    const read = elementColor(1, after({ t: 'read', lane: 0, i: 1 }), DARK)
-    const compared = elementColor(1, after({ t: 'compare', lane: 0, i: 1, j: 2, result: 1 }), DARK)
+    const read = elementColor(1, stateAfter({ t: 'read', lane: 0, i: 1 }), DARK)
+    const compared = elementColor(
+      1,
+      stateAfter({ t: 'compare', lane: 0, i: 1, j: 2, result: 1 }),
+      DARK,
+    )
     expect(read).not.toBe(compared)
   })
 
   it('still shows a read as activity rather than idle', () => {
-    const s = after({ t: 'read', lane: 0, i: 1 })
+    const s = stateAfter({ t: 'read', lane: 0, i: 1 })
     expect(elementColor(1, s, DARK)).not.toBe(elementColor(0, s, DARK))
     expect(elementColor(0, s, DARK)).toBe(DARK.idle)
   })
 
   it('lets a read decay back to idle like every other channel', () => {
-    const s = after({ t: 'read', lane: 0, i: 1 })
+    const s = stateAfter({ t: 'read', lane: 0, i: 1 })
     s.index += DECAY_STEPS
     expect(elementColor(1, s, DARK)).toBe(DARK.idle)
   })
 
   it('still prefers a write and a compare over a read on the same element', () => {
-    const s = after({ t: 'read', lane: 0, i: 1 })
+    const s = stateAfter({ t: 'read', lane: 0, i: 1 })
     applyStep(s, { t: 'compare', lane: 0, i: 1, j: 2, result: 1 })
     const compared = elementColor(1, s, DARK)
     applyStep(s, { t: 'write', lane: 0, i: 1, value: 4 })

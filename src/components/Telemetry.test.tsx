@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
-import { describe, it, expect } from 'vitest'
+
 import { render, screen } from '@testing-library/react'
-import Telemetry, { formatCount, verdictLabel } from './Telemetry'
+import { describe, expect, it } from 'vitest'
 import { getAlgorithm } from '../algorithms'
+import Telemetry, { formatCount, verdictLabel } from './Telemetry'
 
 describe('formatCount', () => {
   it('groups thousands', () => {
@@ -51,7 +52,13 @@ describe('Telemetry', () => {
 
   it('shows the algorithm complexity and stability', () => {
     render(
-      <Telemetry counts={counts} index={0} total={1} verdict={ok} algorithm={getAlgorithm('heap')!} />,
+      <Telemetry
+        counts={counts}
+        index={0}
+        total={1}
+        verdict={ok}
+        algorithm={getAlgorithm('heap')!}
+      />,
     )
     expect(screen.getByTestId('complexity-average').textContent).toContain('O(n log n)')
     expect(screen.getByText(/unstable/i)).toBeTruthy()

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_SOURCE, DRAFT_KEY, loadDraft, saveDraft } from './customCode'
 
 describe('draft persistence', () => {

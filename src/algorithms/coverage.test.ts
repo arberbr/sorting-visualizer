@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest'
-import { ALGORITHMS, algorithmsByFamily } from './index'
+import { describe, expect, it } from 'vitest'
 import { FAMILY_ORDER } from './families'
+import { ALGORITHMS, algorithmsByFamily } from './index'
 
 describe('algorithm coverage', () => {
   it('registers at least 28 algorithms', () => {
@@ -14,13 +14,37 @@ describe('algorithm coverage', () => {
   it('includes the algorithms the spec names explicitly', () => {
     const ids = new Set(ALGORITHMS.map((a) => a.meta.id))
     for (const id of [
-      'bubble', 'cocktail', 'odd-even', 'gnome', 'comb', 'pancake',
-      'insertion', 'binary-insertion', 'shell', 'cycle',
-      'selection', 'double-selection', 'heap',
-      'merge-top-down', 'merge-bottom-up', 'quick-lomuto', 'quick-hoare',
-      'quick-three-way', 'quick-median3', 'introsort', 'timsort',
-      'counting', 'radix-lsd', 'radix-msd', 'bucket', 'pigeonhole',
-      'bitonic', 'tree', 'strand', 'bogo', 'stooge',
+      'bubble',
+      'cocktail',
+      'odd-even',
+      'gnome',
+      'comb',
+      'pancake',
+      'insertion',
+      'binary-insertion',
+      'shell',
+      'cycle',
+      'selection',
+      'double-selection',
+      'heap',
+      'merge-top-down',
+      'merge-bottom-up',
+      'quick-lomuto',
+      'quick-hoare',
+      'quick-three-way',
+      'quick-median3',
+      'introsort',
+      'timsort',
+      'counting',
+      'radix-lsd',
+      'radix-msd',
+      'bucket',
+      'pigeonhole',
+      'bitonic',
+      'tree',
+      'strand',
+      'bogo',
+      'stooge',
     ]) {
       expect(ids, `missing algorithm: ${id}`).toContain(id)
     }

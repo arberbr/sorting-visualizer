@@ -1,4 +1,4 @@
-import { barMetrics, elementColor, splitLanes, type Renderer } from './layout'
+import { barMetrics, elementColor, type Renderer, splitLanes } from './layout'
 
 /** One dot per element, positioned by value. A permutation scatter plot. */
 export const drawDots: Renderer = (ctx, frame, theme, size) => {

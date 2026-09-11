@@ -1,5 +1,5 @@
-import { Budget } from './limits'
-import { emptyCounts, type Counts, type MarkKind, type Step } from './types'
+import type { Budget } from './limits'
+import { type Counts, emptyCounts, type MarkKind, type Step } from './types'
 
 export interface AuxArray {
   readonly length: number
@@ -21,7 +21,10 @@ export class TrackedArray {
   private aux: Float64Array | null = null
   private readonly counters: Counts = emptyCounts()
 
-  constructor(input: readonly number[], private readonly budget: Budget) {
+  constructor(
+    input: readonly number[],
+    private readonly budget: Budget,
+  ) {
     this.data = Float64Array.from(input)
     this.length = input.length
   }

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from 'vitest'
+
 import { renderHook } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
 import { useKeyboard } from './useKeyboard'
 
 const press = (key: string, target?: Element) => {

@@ -1,8 +1,8 @@
 import { drawBars } from './bars'
 import { drawDots } from './dots'
+import type { Renderer } from './layout'
 import { drawPyramid } from './pyramid'
 import { drawRainbow } from './rainbow'
-import type { Renderer } from './layout'
 
 export type RenderStyle = 'bars' | 'dots' | 'rainbow' | 'pyramid'
 
@@ -17,4 +17,4 @@ export function getRenderer(id: RenderStyle): Renderer {
   return (RENDERERS.find((r) => r.id === id) ?? RENDERERS[0]).draw
 }
 
-export type { Renderer, Size, PlotArea } from './layout'
+export type { PlotArea, Renderer, Size } from './layout'

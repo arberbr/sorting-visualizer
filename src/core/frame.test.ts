@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { applyStep, createInitialState } from './frame'
 import type { Step } from './types'
 

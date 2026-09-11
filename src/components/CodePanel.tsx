@@ -37,7 +37,7 @@ export default function CodePanel({ source, busy, error, onSourceChange, onRun }
             {error.message}
           </span>
         )}
-        <button onClick={onRun} disabled={busy}>
+        <button type="button" onClick={onRun} disabled={busy}>
           {busy ? 'running…' : 'run ▶'}
         </button>
       </div>
