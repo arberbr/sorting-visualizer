@@ -17,6 +17,8 @@ export interface ArraySettings {
 interface Props {
   settings: ArraySettings
   style: RenderStyle
+  /** Largest array this mode allows — below MAX_N only in race mode. */
+  sizeCap: number
   busy: boolean
   onChange: (next: ArraySettings) => void
   onStyleChange: (next: RenderStyle) => void
@@ -26,6 +28,7 @@ interface Props {
 export default function ArrayConfig({
   settings,
   style,
+  sizeCap,
   busy,
   onChange,
   onStyleChange,
@@ -41,17 +44,24 @@ export default function ArrayConfig({
         <input
           type="range"
           min={MIN_N}
-          max={MAX_N}
+          max={sizeCap}
           value={settings.size}
           onChange={(e) => set('size', Number(e.target.value))}
           aria-label="Array size"
         />
       </label>
-      {settings.size > LARGE_N_WARNING && (
+      {sizeCap < MAX_N ? (
         <p className="config__warn">
-          Above {LARGE_N_WARNING} elements, traces take longer to compute and bars
-          become sub-pixel and hard to read.
+          Racing is capped at {sizeCap} elements: every lane keeps its own full trace of
+          every operation it performs, so four lanes hold four traces at once.
         </p>
+      ) : (
+        settings.size > LARGE_N_WARNING && (
+          <p className="config__warn">
+            Above {LARGE_N_WARNING} elements, traces take longer to compute and bars
+            become sub-pixel and hard to read.
+          </p>
+        )
       )}
 
       <label className="config__row">

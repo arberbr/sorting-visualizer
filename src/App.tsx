@@ -17,7 +17,7 @@ import Telemetry, {
 import { ALGORITHMS, getAlgorithm } from './algorithms'
 import { Sonifier } from './audio/sonifier'
 import { loadDraft, saveDraft } from './customCode'
-import { generate } from './core/generate'
+import { generate, MAX_N, RACE_MAX_N } from './core/generate'
 import { emptyCounts } from './core/types'
 import type { RunError, Trace } from './core/runner'
 import { usePlayer } from './player/usePlayer'
@@ -208,7 +208,10 @@ export default function App() {
     setVerdict(null)
     let input: number[]
     try {
-      input = generate(Math.max(8, settings.size), settings.distribution, settings.seed)
+      // Clamped here as well as in the rail, so a size carried in from
+      // another mode can never dispatch four full-size traces.
+      const n = Math.max(8, Math.min(settings.size, RACE_MAX_N))
+      input = generate(n, settings.distribution, settings.seed)
     } catch (e) {
       if (seq !== requestSeq.current) return
       setError({ code: 'runtime', message: e instanceof Error ? e.message : String(e) })
@@ -290,6 +293,15 @@ export default function App() {
     }
     return () => clearTimeout(windowTimer.current)
   }, [mode, algorithmId, settings, start])
+
+  // Entering race mode with a larger array carried in from another mode:
+  // bring the stored size down to the race cap so the slider, its label and
+  // the array actually generated all agree. Returning the same object when
+  // nothing needs clamping keeps this from looping.
+  useEffect(() => {
+    if (mode !== 'race') return
+    setSettings((s) => (s.size > RACE_MAX_N ? { ...s, size: RACE_MAX_N } : s))
+  }, [mode])
 
   // Same leading-edge + trailing debounce as the effect above, kept as an
   // independent timer/flag pair rather than sharing one with `start` so a
@@ -377,6 +389,7 @@ export default function App() {
         <ArrayConfig
           settings={settings}
           style={style}
+          sizeCap={mode === 'race' ? RACE_MAX_N : MAX_N}
           busy={busy}
           onChange={setSettings}
           onStyleChange={setStyle}

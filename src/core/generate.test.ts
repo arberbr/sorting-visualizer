@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest'
-import { DISTRIBUTIONS, generate, makeRng, type Distribution } from './generate'
+import {
+  DISTRIBUTIONS,
+  generate,
+  makeRng,
+  MAX_N,
+  MIN_N,
+  RACE_MAX_N,
+  type Distribution,
+} from './generate'
 
 describe('makeRng', () => {
   it('is deterministic for a seed and different across seeds', () => {
@@ -77,5 +85,13 @@ describe('generate', () => {
   it('rejects sizes outside the supported range', () => {
     expect(() => generate(2, 'random', 1)).toThrow(RangeError)
     expect(() => generate(5000, 'random', 1)).toThrow(RangeError)
+  })
+})
+
+describe('RACE_MAX_N', () => {
+  it('is a legal array size below the single-run ceiling', () => {
+    expect(RACE_MAX_N).toBeGreaterThanOrEqual(MIN_N)
+    expect(RACE_MAX_N).toBeLessThan(MAX_N)
+    expect(() => generate(RACE_MAX_N, 'random', 1)).not.toThrow()
   })
 })

@@ -22,6 +22,16 @@ export const DISTRIBUTIONS: ReadonlyArray<{ id: Distribution; label: string }> =
 export const MIN_N = 8
 export const MAX_N = 1000
 /**
+ * The ceiling for race mode specifically. Every lane keeps its own complete
+ * Step trace on the main thread, so a 4-lane race costs four of them at once
+ * — measured at roughly 100-180 MB per trace at n=1000, i.e. around half a
+ * gigabyte retained. The spec's planned mitigation (posting traces back as
+ * transferable typed arrays) was never built, and race mode's pedagogical
+ * value — watching algorithms diverge under one clock — is fully served at
+ * this size. Single-run mode is unaffected and still goes to MAX_N.
+ */
+export const RACE_MAX_N = 400
+/**
  * Above this, a trace takes noticeably longer to compute and bars fall below
  * a pixel — a legibility and latency threshold, not a budget one. (It is not
  * where O(n^2) algorithms hit the step cap: they don't, at any size this app
