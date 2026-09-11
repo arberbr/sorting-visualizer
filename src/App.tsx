@@ -17,6 +17,7 @@ import type { RunError, Trace } from './core/runner'
 import { usePlayer } from './player/usePlayer'
 import { useRace, type RaceInput } from './player/useRace'
 import { DARK } from './render/theme'
+import { useKeyboard } from './useKeyboard'
 import { useRunner } from './worker/useRunner'
 
 const DEFAULT_RACE_IDS = ['bubble', 'quick-lomuto']
@@ -289,6 +290,17 @@ export default function App() {
     if (mode !== 'race') raceState.pause()
   }, [mode]) // eslint-disable-line -- same as above, for raceState.pause
 
+  // Keyboard transport follows whichever view is on screen: the race
+  // transport in race mode, the single-run player in builtin/custom mode.
+  // Both expose the same toggle/stepForward/stepBack/seek/total surface.
+  const transport = mode === 'race' ? raceState : player
+  useKeyboard({
+    onToggle: transport.toggle,
+    onStep: (d) => (d > 0 ? transport.stepForward() : transport.stepBack()),
+    onStart: () => transport.seek(0),
+    onEnd: () => transport.seek(transport.total),
+  })
+
   return (
     <div className="app">
       <header className="app__head">
@@ -296,6 +308,7 @@ export default function App() {
           sort<span>.</span>
         </div>
         <div className="label">algorithm visualizer</div>
+        <span className="label app__shortcuts">space play · ← → step · home/end jump</span>
         <AudioToggle
           enabled={audioOn}
           volume={volume}
@@ -376,14 +389,14 @@ export default function App() {
 
       <main className={`app__stage${mode === 'custom' ? ' app__stage--split' : ''}`}>
         {mode === 'race' ? (
-          <div style={{ position: 'relative', minHeight: 0, height: '100%' }}>
+          <div style={{ position: 'relative', minWidth: 0, minHeight: 0, height: '100%' }}>
             {raceState.race && (
               <RaceGrid race={raceState.race} style={settings.style} theme={DARK} />
             )}
             <ErrorBanner error={error} onDismiss={() => setError(null)} />
           </div>
         ) : (
-          <div style={{ position: 'relative', minHeight: 0, height: '100%' }}>
+          <div style={{ position: 'relative', minWidth: 0, minHeight: 0, height: '100%' }}>
             <Canvas engine={player.engine} style={settings.style} theme={DARK} />
             <ErrorBanner error={error} onDismiss={() => setError(null)} />
           </div>

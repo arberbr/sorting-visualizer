@@ -95,7 +95,7 @@ input[type='range'] {
 .app {
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr) 320px;
-  grid-template-rows: 48px minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   grid-template-areas:
     'head head head'
     'rail stage inspector'
@@ -106,10 +106,16 @@ input[type='range'] {
 .app__head {
   grid-area: head;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-4);
-  padding: 0 var(--space-4);
+  gap: var(--space-2) var(--space-4);
+  min-height: 48px;
+  padding: var(--space-2) var(--space-4);
   border-bottom: var(--hairline);
+}
+
+.app__shortcuts {
+  white-space: normal;
 }
 
 .app__rail {
@@ -160,5 +166,54 @@ input[type='range'] {
   .app__inspector {
     border-left: none;
     border-top: var(--hairline);
+  }
+}
+
+/* The transport bar's fixed 180px speed column plus its auto-sized button
+   row stops fitting the stage column somewhere around 640-750px (the rail
+   is still a fixed 220px column here, per the 1100px breakpoint above), well
+   before the app shell itself needs to change. Measured empirically: it
+   overflows at 700px and is clean by 750px, so this threshold covers the gap
+   with margin without touching the rail/inspector layout that 820px-1100px
+   is meant to keep. */
+@media (max-width: 750px) {
+  .controls {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--space-2);
+  }
+
+  .controls__transport {
+    flex-wrap: wrap;
+    row-gap: var(--space-1);
+  }
+}
+
+/* Phone widths: the rail's fixed column stops fitting well before 1100px's
+   own breakpoint kicks in — nothing below reflows it, so at ~375-420px it
+   simply overflows the viewport and the whole page scrolls sideways. Below
+   this width the rail gives up being a column at all and becomes its own
+   full-width, height-capped row above the stage. This is the "usable but
+   reduced" phone layout, not a designed mobile experience: everything still
+   works, nothing is unreachable, it just stacks. */
+@media (max-width: 640px) {
+  .app {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(200px, 50vh) auto auto;
+    grid-template-areas:
+      'head'
+      'rail'
+      'stage'
+      'controls'
+      'inspector';
+  }
+
+  .app__rail {
+    max-height: 40vh;
+    border-right: none;
+    border-bottom: var(--hairline);
+  }
+
+  .app__shortcuts {
+    display: none;
   }
 }

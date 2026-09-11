@@ -37,7 +37,15 @@
   border-left-color: var(--c-accent);
 }
 
+.picker__name {
+  overflow: hidden;
+  min-width: 0;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 .picker__badge {
+  flex: none;
   font-size: var(--fs-micro);
   color: var(--c-muted);
 }
