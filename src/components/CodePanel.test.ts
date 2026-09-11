@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { toPlainJs } from './CodePanel'
+import { toPlainJs } from '../algorithms/toPlainJs'
 import { ALGORITHMS, getAlgorithm } from '../algorithms'
 import { compileCustom } from '../worker/compile'
 import { runSort } from '../core/runner'
@@ -76,19 +76,17 @@ describe('toPlainJs', () => {
     }
   })
 
-  it('documents its own known gap: timsort references a module-level constant extractSortSource does not capture', () => {
-    // Not a toPlainJs bug — RUN is declared above the `export function sort`
-    // marker, so it is simply absent from `algo.source`. Fixing this would
-    // mean changing extractSortSource, which has its own contract test and
-    // is out of this task's file list.
-    const algo = getAlgorithm('timsort')!
-    const compiled = compileCustom(toPlainJs(algo.source))
-    expect(compiled.ok).toBe(true)
-    if (!compiled.ok) return
-    const result = runSort(compiled.fn, input)
-    expect(result.ok).toBe(false)
-    if (result.ok) return
-    expect(result.error.code).toBe('runtime')
-    expect(result.error.message).toMatch(/RUN is not defined/)
-  })
+  // Regression coverage for a real bug: timsort, introsort and shell each
+  // declared a module-level `const` (RUN / SMALL / GAPS) *above*
+  // `export function sort`, so extractSortSource never captured it and the
+  // extracted source threw a ReferenceError the moment it ran. Fixed by
+  // nesting each constant inside its own `sort` function (the same pattern
+  // pancake.ts already used for its `flip` closure) rather than by changing
+  // extractSortSource, which has its own contract test to stay simple.
+  it.each(['timsort', 'introsort', 'shell'])(
+    'loading %s as a starting point produces code that actually sorts',
+    (id) => {
+      check(id, input)
+    },
+  )
 })

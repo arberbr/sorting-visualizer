@@ -172,6 +172,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
+  min-width: 0;
 }
 
 .banner__code {
@@ -179,8 +180,10 @@
 }
 
 .banner__detail {
+  min-width: 0;
   font-size: var(--fs-small);
   color: var(--c-muted);
+  overflow-wrap: anywhere;
 }
 
 .mode {

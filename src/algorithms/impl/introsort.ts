@@ -15,9 +15,9 @@ export const meta: AlgorithmMeta = {
     "Quicksort until the recursion gets too deep, then heapsort for that subrange, then insertion sort for small ranges. This hybrid is what most C++ standard libraries actually ship as std::sort.",
 }
 
-const SMALL = 16
-
 export function sort(a: TrackedArray): void {
+  const SMALL = 16
+
   const insertion = (lo: number, hi: number) => {
     for (let i = lo + 1; i <= hi; i++) {
       let j = i

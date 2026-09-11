@@ -15,9 +15,9 @@ export const meta: AlgorithmMeta = {
     'Insertion sort applied to interleaved subsequences with a shrinking gap, using the Ciura sequence. Early wide passes move elements a long way cheaply, so the final gap-1 pass has almost nothing left to do.',
 }
 
-const GAPS = [1750, 701, 301, 132, 57, 23, 10, 4, 1]
-
 export function sort(a: TrackedArray): void {
+  const GAPS = [1750, 701, 301, 132, 57, 23, 10, 4, 1]
+
   for (const gap of GAPS) {
     if (gap >= a.length) continue
     for (let i = gap; i < a.length; i++) {

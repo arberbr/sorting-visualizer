@@ -15,9 +15,9 @@ export const meta: AlgorithmMeta = {
     'Insertion-sorts fixed runs of 32, then merges runs of doubling width. This is the shape of the real Timsort in Python and Java, minus its galloping mode and run-length invariants.',
 }
 
-const RUN = 32
-
 export function sort(a: TrackedArray): void {
+  const RUN = 32
+
   if (a.length < 2) return
   const aux = a.alloc(a.length)
 

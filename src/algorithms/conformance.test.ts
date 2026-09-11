@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import { ALGORITHMS } from './index'
+import { toPlainJs } from './toPlainJs'
 import { runSort } from '../core/runner'
 import { applyStep, createInitialState } from '../core/frame'
 import { generate, type Distribution } from '../core/generate'
+import { compileCustom } from '../worker/compile'
 
 const FIXTURES: ReadonlyArray<{ name: string; input: number[] }> = [
   { name: 'empty', input: [] },
@@ -146,6 +148,39 @@ describe('every registered algorithm', () => {
       expect(r.ok).toBe(true)
       if (!r.ok) return
       expect(r.trace.counts.compares, algo.meta.id).toBeGreaterThan(0)
+    })
+
+    // Every algorithm is also a "start from a built-in" starting point in the
+    // custom-code editor (Task 17), which runs `toPlainJs(algo.source)` through
+    // the exact same path user-written code takes: `compileCustom` then
+    // `runSort`. Proving that here — for the real, registered algorithm list,
+    // through the real conversion function, not a copy of it — means a future
+    // algorithm added to impl/ is automatically checked as a valid editor
+    // starting point, not just as internal TrackedArray-calling code. This is
+    // exactly the class of bug that shipped twice before this test existed:
+    // toPlainJs's brief-literal first draft failed to compile 9/31 algorithms
+    // (merge sort's three-typed-param closure among them), and three algorithms
+    // (timsort, introsort, shell) closed over a module-level const declared
+    // above `export function sort` that the extracted source never included,
+    // throwing a ReferenceError the moment the "working" code actually ran.
+    it('is a valid starting point for the custom-code editor', () => {
+      const n = Math.min(16, algo.meta.maxN ?? 16)
+      // Deliberately not generate(): its own MIN_N floor (8) would exclude
+      // algorithms capped tighter than that (bogo's maxN is 7). A plain
+      // reversed run is non-trivial input for every algorithm here, and
+      // matches the size already proven to finish bogosort's random search
+      // within budget (see the 'reversed (7)' fixture above).
+      const input = Array.from({ length: n }, (_, i) => n - i)
+      const compiled = compileCustom(toPlainJs(algo.source))
+      expect(compiled.ok, compiled.ok ? '' : `${algo.meta.id}: ${compiled.error.message}`).toBe(
+        true,
+      )
+      if (!compiled.ok) return
+      const r = runSort(compiled.fn, input)
+      expect(r.ok, r.ok ? '' : `${algo.meta.id}: ${r.error.message}`).toBe(true)
+      if (!r.ok) return
+      expect(r.finalArray, algo.meta.id).toEqual([...input].sort((x, y) => x - y))
+      expect(r.sorted, algo.meta.id).toBe(true)
     })
   })
 })
