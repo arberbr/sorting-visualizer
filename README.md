@@ -11,7 +11,9 @@ npm run dev
 
 ## What it does
 
-- 31 sorting algorithms across seven families, each with complexity, stability and a live code view.
+- 31 sorting algorithms across seven families, each with its complexity, stability and
+  in-place characteristics in the inspector. Any of their implementations can be loaded
+  into the editor with "start from a built-in" in "your code".
 - Four render styles: bars, dots, rainbow, pyramid.
 - Full transport: play, pause, single step in both directions, scrub, jump. Backward
   scrubbing is exact — the app never re-runs the algorithm.
@@ -40,6 +42,14 @@ function sort(arr) {
 The full API is listed beside the editor. Your code runs in a Web Worker under a
 step budget and a time limit, so an infinite loop produces an error message
 rather than a frozen tab.
+
+## Known limitation: race lanes come from the built-in registry only
+
+The 2-4 lanes of a race are chosen from the 31 registered algorithms. Custom
+code cannot be entered into a race — "your code" runs on its own single-run
+transport instead. Race mode also caps the array at 400 elements however large
+the slider is set in the other modes: every lane keeps its own full trace of
+every operation it performed, so four lanes cost four traces at once.
 
 ## Known limitation: audio only follows single-run playback
 

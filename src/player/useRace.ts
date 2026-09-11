@@ -90,13 +90,10 @@ export function useRace(inputs: readonly RaceInput[]) {
     playing,
     speed,
     setSpeed,
-    play: () => setPlaying(true),
     pause: () => setPlaying(false),
     toggle: () => setPlaying((p) => !p),
     seek: (i: number) => act((r) => r.seek(i)),
     stepForward: () => act((r) => r.stepBy(1)),
     stepBack: () => act((r) => r.stepBy(-1)),
-    toStart: () => act((r) => r.seek(0)),
-    toEnd: () => act((r) => r.seek(r.total)),
   }
 }

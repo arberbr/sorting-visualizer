@@ -21,7 +21,12 @@ export const DISTRIBUTIONS: ReadonlyArray<{ id: Distribution; label: string }> =
 
 export const MIN_N = 8
 export const MAX_N = 1000
-/** Above this, O(n^2) algorithms are likely to hit the step cap. */
+/**
+ * Above this, a trace takes noticeably longer to compute and bars fall below
+ * a pixel — a legibility and latency threshold, not a budget one. (It is not
+ * where O(n^2) algorithms hit the step cap: they don't, at any size this app
+ * allows.)
+ */
 export const LARGE_N_WARNING = 400
 
 /** mulberry32 — small, fast, and good enough for shuffling bars. */

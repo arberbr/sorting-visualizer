@@ -1,21 +1,36 @@
 import { DISTRIBUTIONS, LARGE_N_WARNING, MAX_N, MIN_N, type Distribution } from '../core/generate'
 import { RENDERERS, type RenderStyle } from '../render'
 
+/**
+ * Everything that defines the *input* — and therefore everything a change to
+ * which means re-running the sort. The render style is deliberately not in
+ * here: it only decides how an existing trace is drawn, and living in this
+ * object made switching style re-run the whole sort in the worker, re-clone
+ * the trace and reset the transport to step 0 (times four, in race mode).
+ */
 export interface ArraySettings {
   size: number
   distribution: Distribution
   seed: number
-  style: RenderStyle
 }
 
 interface Props {
   settings: ArraySettings
+  style: RenderStyle
   busy: boolean
   onChange: (next: ArraySettings) => void
+  onStyleChange: (next: RenderStyle) => void
   onRegenerate: () => void
 }
 
-export default function ArrayConfig({ settings, busy, onChange, onRegenerate }: Props) {
+export default function ArrayConfig({
+  settings,
+  style,
+  busy,
+  onChange,
+  onStyleChange,
+  onRegenerate,
+}: Props) {
   const set = <K extends keyof ArraySettings>(key: K, value: ArraySettings[K]) =>
     onChange({ ...settings, [key]: value })
 
@@ -67,8 +82,8 @@ export default function ArrayConfig({ settings, busy, onChange, onRegenerate }: 
       <label className="config__row">
         <span className="label">render</span>
         <select
-          value={settings.style}
-          onChange={(e) => set('style', e.target.value as RenderStyle)}
+          value={style}
+          onChange={(e) => onStyleChange(e.target.value as RenderStyle)}
           aria-label="Render style"
         >
           {RENDERERS.map((r) => (

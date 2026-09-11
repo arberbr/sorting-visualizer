@@ -67,13 +67,10 @@ export function usePlayer(trace: Trace | null) {
     playing,
     speed,
     setSpeed,
-    play: () => setPlaying(true),
     pause: () => setPlaying(false),
     toggle: () => setPlaying((p) => !p),
     seek: (i: number) => act((e) => e.seek(i)),
     stepForward: () => act((e) => e.stepBy(1)),
     stepBack: () => act((e) => e.stepBy(-1)),
-    toStart: () => act((e) => e.seek(0)),
-    toEnd: () => act((e) => e.seek(e.total)),
   }
 }

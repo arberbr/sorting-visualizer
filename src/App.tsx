@@ -18,9 +18,11 @@ import { ALGORITHMS, getAlgorithm } from './algorithms'
 import { Sonifier } from './audio/sonifier'
 import { loadDraft, saveDraft } from './customCode'
 import { generate } from './core/generate'
+import { emptyCounts } from './core/types'
 import type { RunError, Trace } from './core/runner'
 import { usePlayer } from './player/usePlayer'
 import { useRace, type RaceInput } from './player/useRace'
+import type { RenderStyle } from './render'
 import { DARK } from './render/theme'
 import { useKeyboard } from './useKeyboard'
 import { useRunner } from './worker/useRunner'
@@ -31,7 +33,6 @@ const DEFAULT_SETTINGS: ArraySettings = {
   size: 64,
   distribution: 'random',
   seed: 1,
-  style: 'bars',
 }
 
 /** How long a settings/algorithm change waits before it's actually dispatched. */
@@ -40,6 +41,9 @@ const DEBOUNCE_MS = 150
 export default function App() {
   const [algorithmId, setAlgorithmId] = useState('quick-lomuto')
   const [settings, setSettings] = useState<ArraySettings>(DEFAULT_SETTINGS)
+  // Its own state, not part of ArraySettings: the style decides how a trace is
+  // drawn, never what the trace is, so changing it must only repaint.
+  const [style, setStyle] = useState<RenderStyle>('bars')
   const [trace, setTrace] = useState<Trace | null>(null)
   // Absent until a run actually reports one: `null` before the first run and
   // after any failed one, so the chip can never claim a verdict it doesn't
@@ -322,11 +326,14 @@ export default function App() {
   // when the mode changes away from it.
   useEffect(() => {
     if (mode === 'race') player.pause()
-  }, [mode]) // eslint-disable-line -- player.pause is a stable setState wrapper; omitted deliberately
+    // player.pause is a stable setState wrapper; omitted from the deps
+    // deliberately so this fires on a mode change and nothing else.
+  }, [mode])
 
   useEffect(() => {
     if (mode !== 'race') raceState.pause()
-  }, [mode]) // eslint-disable-line -- same as above, for raceState.pause
+    // Same as above, for raceState.pause.
+  }, [mode])
 
   // Keyboard transport follows whichever view is on screen: the race
   // transport in race mode, the single-run player in builtin/custom mode.
@@ -369,8 +376,10 @@ export default function App() {
       <nav className="app__rail" aria-label="Algorithms">
         <ArrayConfig
           settings={settings}
+          style={style}
           busy={busy}
           onChange={setSettings}
+          onStyleChange={setStyle}
           onRegenerate={() => setSettings((s) => ({ ...s, seed: s.seed + 1 }))}
         />
         {mode === 'builtin' && <AlgorithmPicker selectedId={algorithmId} onSelect={setAlgorithmId} />}
@@ -429,13 +438,13 @@ export default function App() {
         {mode === 'race' ? (
           <div style={{ position: 'relative', minWidth: 0, minHeight: 0, height: '100%' }}>
             {raceState.race && (
-              <RaceGrid race={raceState.race} style={settings.style} theme={DARK} />
+              <RaceGrid race={raceState.race} style={style} theme={DARK} />
             )}
             <ErrorBanner error={error} onDismiss={() => setError(null)} />
           </div>
         ) : (
           <div style={{ position: 'relative', minWidth: 0, minHeight: 0, height: '100%' }}>
-            <Canvas engine={player.engine} style={settings.style} theme={DARK} />
+            <Canvas engine={player.engine} style={style} theme={DARK} />
             <ErrorBanner error={error} onDismiss={() => setError(null)} />
           </div>
         )}
@@ -527,7 +536,7 @@ export default function App() {
           </div>
         ) : (
           <Telemetry
-            counts={player.engine?.frame.counts ?? { reads: 0, writes: 0, compares: 0, swaps: 0 }}
+            counts={player.engine?.frame.counts ?? emptyCounts()}
             index={player.index}
             total={player.total}
             verdict={verdict}

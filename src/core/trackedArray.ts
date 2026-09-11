@@ -1,5 +1,5 @@
 import { Budget } from './limits'
-import { emptyCounts, type Counts, type Lane, type MarkKind, type Step } from './types'
+import { emptyCounts, type Counts, type MarkKind, type Step } from './types'
 
 export interface AuxArray {
   readonly length: number
@@ -153,5 +153,3 @@ export class TrackedArray {
 function sign(d: number): -1 | 0 | 1 {
   return d < 0 ? -1 : d > 0 ? 1 : 0
 }
-
-export type { Lane }
