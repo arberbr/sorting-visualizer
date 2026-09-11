@@ -70,13 +70,42 @@ that's expected, not a bug.
 - `src/player/` — playback engine and timing.
 - `src/render/` — pure layout math plus the four canvas renderers.
 
-## Tests
+## Tests and checks
 
 ```bash
-npm test
-npm run typecheck
+npm test          # vitest
+npm run typecheck # tsc --noEmit
+npm run lint      # biome lint
+npm run format    # biome format --write
+npm run check:fix # fix formatting, lint and import order in one pass
 ```
 
 The conformance harness in `src/algorithms/conformance.test.ts` proves every
 registered algorithm against nine fixtures and five generated distributions,
-and checks that each trace replays to the same array the algorithm produced.
+checks that each trace replays to the same array the algorithm produced, and
+checks that each algorithm's source still compiles and sorts after being
+converted to plain JavaScript for the editor.
+
+## CI, and where the blocking actually happens
+
+`.github/workflows/ci.yml` runs five independent gates on every push and pull
+request — format, lint, typecheck, test, build — as separate jobs, so a red X
+names the thing that broke without anyone opening a log.
+
+GitHub requires a paid plan for branch protection on a private repository, so
+those gates **report** a failure but cannot by themselves prevent a merge. The
+blocking is done locally instead, by a committed pre-push hook. Enable it once
+per clone:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+It runs format, lint, typecheck and tests before anything leaves your machine
+and refuses the push if any of them fail — running all four first, so one push
+tells you everything that is wrong rather than making you rediscover the
+problems one at a time. `git push --no-verify` overrides it deliberately.
+
+If this repository ever goes public, or onto a paid plan, add a ruleset on
+`master` requiring the `format`, `lint`, `typecheck`, `test` and `build`
+checks, and the enforcement moves server-side where it cannot be bypassed.

@@ -1,0 +1,53 @@
+#!/bin/sh
+#
+# Runs the same gates CI runs, before anything leaves the machine.
+#
+# GitHub requires a paid plan for branch protection on a private repo, so the
+# CI workflow can report a failure but cannot prevent a merge. This hook is
+# where the blocking actually happens.
+#
+# Enable it once per clone:
+#     git config core.hooksPath .githooks
+#
+# Deliberate escape hatch, for when you know what you are doing:
+#     git push --no-verify
+
+set -e
+
+# Nothing to check if dependencies were never installed.
+if [ ! -d node_modules ]; then
+  echo "pre-push: node_modules is missing — run 'npm ci' first." >&2
+  exit 1
+fi
+
+failed=""
+
+run_gate() {
+  name="$1"
+  shift
+  printf 'pre-push: %s... ' "$name"
+  if output=$("$@" 2>&1); then
+    printf 'ok\n'
+  else
+    printf 'FAILED\n'
+    printf '%s\n' "$output" | sed 's/^/    /'
+    failed="$failed $name"
+  fi
+}
+
+# Every gate runs even after one fails, so a single push reports every problem
+# rather than making you rediscover them one at a time.
+run_gate format    npm run --silent format:check
+run_gate lint      npm run --silent lint
+run_gate typecheck npm run --silent typecheck
+run_gate test      npm run --silent test
+
+if [ -n "$failed" ]; then
+  echo "" >&2
+  echo "pre-push: blocked —$failed" >&2
+  echo "pre-push: 'npm run check:fix' fixes most format and lint problems." >&2
+  echo "pre-push: use 'git push --no-verify' to override deliberately." >&2
+  exit 1
+fi
+
+echo "pre-push: all gates passed"
