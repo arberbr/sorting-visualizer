@@ -47,7 +47,7 @@ export default function App() {
     saveDraft(source)
   }, [source])
 
-  const { run, busy } = useRunner()
+  const { run, supersede, busy } = useRunner()
   const player = usePlayer(trace)
   const raceState = useRace(raceInputs)
   const algorithm = getAlgorithm(algorithmId)!
@@ -94,11 +94,20 @@ export default function App() {
   // (see sortRunner.worker.ts), so in practice responses already arrive in
   // order — this is a belt-and-braces check, not a fix for an observed
   // reordering.
+  //
+  // It only discards stale *results*, though; `supersede()` is what stops
+  // the stale *work*. Every dispatch below bumps this counter and then
+  // calls `supersede()` exactly once — once per logical dispatch, so a
+  // race's own concurrent lanes never cancel each other — which terminates
+  // the worker mid-computation and hands the fresh one an empty queue.
+  // Without it a superseded run keeps burning the single FIFO worker in
+  // front of the run the user is actually waiting for.
   const requestSeq = useRef(0)
 
   const start = useCallback(
     async (id: string, s: ArraySettings) => {
       const seq = ++requestSeq.current
+      supersede()
       const cap = getAlgorithm(id)?.meta.maxN
       let capped: number[]
       try {
@@ -118,6 +127,7 @@ export default function App() {
       }
       const result = await run({ kind: 'builtin', algorithmId: id, input: capped })
       if (seq !== requestSeq.current) return // superseded by a later run
+      if (!result) return // cancelled outright — no result, and nothing to report
       if (result.ok) {
         setError(null)
         setSorted(result.sorted)
@@ -127,7 +137,7 @@ export default function App() {
         setTrace(null)
       }
     },
-    [run],
+    [run, supersede],
   )
 
   // Mirrors `start` above: same shared `requestSeq` counter (so a late
@@ -135,6 +145,7 @@ export default function App() {
   // never-throws contract for generate()'s RangeError.
   const runCustom = useCallback(async () => {
     const seq = ++requestSeq.current
+    supersede()
     let input: number[]
     try {
       input = generate(Math.max(8, settings.size), settings.distribution, settings.seed)
@@ -146,6 +157,7 @@ export default function App() {
     }
     const result = await run({ kind: 'custom', source, input })
     if (seq !== requestSeq.current) return // superseded by a later run
+    if (!result) return // cancelled outright — no result, and nothing to report
     if (result.ok) {
       setError(null)
       setSorted(result.sorted)
@@ -154,7 +166,7 @@ export default function App() {
       setError(result.error)
       setTrace(null)
     }
-  }, [run, settings, source])
+  }, [run, supersede, settings, source])
 
   // Fires every lane's run concurrently over one shared input, same shared
   // `requestSeq` counter as `start`/`runCustom` (so a stale race batch can't
@@ -165,6 +177,9 @@ export default function App() {
   // first failure surfaces in the error banner.
   const startRace = useCallback(async () => {
     const seq = ++requestSeq.current
+    // Once, for the whole batch: the lanes below are one logical dispatch
+    // and must not cancel each other.
+    supersede()
     let input: number[]
     try {
       input = generate(Math.max(8, settings.size), settings.distribution, settings.seed)
@@ -187,6 +202,7 @@ export default function App() {
     const lanes: RaceInput[] = []
     let firstError: RunError | null = null
     results.forEach((result, i) => {
+      if (!result) return // cancelled lane — nothing to show and nothing to report
       if (result.ok) {
         lanes.push({
           id: raceIds[i],
@@ -199,7 +215,7 @@ export default function App() {
     })
     setError(firstError)
     setRaceInputs(lanes)
-  }, [raceIds, run, settings])
+  }, [raceIds, run, supersede, settings])
 
   // Re-run whenever the algorithm or the input definition changes.
   //

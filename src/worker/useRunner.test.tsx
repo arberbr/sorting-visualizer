@@ -128,6 +128,141 @@ describe('useRunner', () => {
     await waitFor(() => expect(result.current.busy).toBe(false))
   })
 
+  /**
+   * A worker that queues every request and only answers when the test says so,
+   * so two requests can be genuinely outstanding at the same time — the shape
+   * App produces whenever a race fans 2-4 lanes onto the single FIFO worker, or
+   * a debounced leading + trailing dispatch overlap.
+   */
+  function deferredWorker(): WorkerLike & { sent: RunRequest[]; terminated: boolean; flush(): void } {
+    const listeners = new Set<(e: { data: RunResponse }) => void>()
+    const queued: RunRequest[] = []
+    return {
+      sent: [],
+      terminated: false,
+      postMessage(m: unknown) {
+        const req = m as RunRequest
+        this.sent.push(req)
+        queued.push(req)
+      },
+      flush() {
+        // FIFO, exactly like the real worker's message loop.
+        for (const req of queued.splice(0)) {
+          const response: RunResponse = { id: req.id, result: execute(req) }
+          for (const l of listeners) l({ data: response })
+        }
+      },
+      terminate() {
+        this.terminated = true
+        queued.length = 0
+      },
+      addEventListener(_t, l) {
+        listeners.add(l)
+      },
+      removeEventListener(_t, l) {
+        listeners.delete(l)
+      },
+    }
+  }
+
+  describe('concurrent requests', () => {
+    it('resolves two simultaneously outstanding requests with their own results', async () => {
+      const worker = deferredWorker()
+      const { result } = renderHook(() => useRunner(() => worker))
+
+      let a: Awaited<ReturnType<typeof result.current.run>> | undefined
+      let b: Awaited<ReturnType<typeof result.current.run>> | undefined
+      await act(async () => {
+        const pa = result.current.run({ kind: 'builtin', algorithmId: 'bubble', input: [2, 1] })
+        const pb = result.current.run({ kind: 'builtin', algorithmId: 'bubble', input: [9, 8, 7] })
+        expect(worker.sent).toHaveLength(2)
+        worker.flush()
+        ;[a, b] = await Promise.all([pa, pb])
+      })
+
+      expect(a?.ok && a.finalArray).toEqual([1, 2])
+      expect(b?.ok && b.finalArray).toEqual([7, 8, 9])
+      await waitFor(() => expect(result.current.busy).toBe(false))
+    })
+
+    it('does not resolve a superseded request with a timeout', async () => {
+      // The bug this guards: a superseded request left running on the single
+      // FIFO worker used to sit there until its dispatch-time watchdog fired,
+      // whereupon reapWedgedWorker resolved *everything* pending — including
+      // the batch the user actually wanted — with code: 'timeout'.
+      const first = deferredWorker()
+      const second = deferredWorker()
+      let calls = 0
+      const { result } = renderHook(() => useRunner(() => (++calls === 1 ? first : second)))
+
+      let superseded: Awaited<ReturnType<typeof result.current.run>> | undefined
+      let live: Awaited<ReturnType<typeof result.current.run>> | undefined
+      await act(async () => {
+        const stale = result.current.run({
+          kind: 'builtin',
+          algorithmId: 'bubble',
+          input: [2, 1],
+          limits: { maxMillis: 20, maxSteps: 1000 },
+        })
+        result.current.supersede()
+        const fresh = result.current.run({ kind: 'builtin', algorithmId: 'bubble', input: [3, 1] })
+        second.flush()
+        ;[superseded, live] = await Promise.all([stale, fresh])
+      })
+
+      // Cancelled, not failed: null carries no RunError at all, so nothing can
+      // reach the error banner and blame the user's input.
+      expect(superseded).toBeNull()
+      expect(live?.ok).toBe(true)
+      // And the stale computation genuinely stopped rather than being left to
+      // hog the worker in front of the request that matters.
+      expect(first.terminated).toBe(true)
+      expect(second.sent).toHaveLength(1)
+
+      // Well past the superseded request's watchdog window: nothing fires
+      // retroactively and the live result is untouched.
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 1100))
+      })
+      expect(result.current.busy).toBe(false)
+    })
+
+    it('keeps busy correct across a supersede', async () => {
+      const first = deferredWorker()
+      const second = deferredWorker()
+      let calls = 0
+      const { result } = renderHook(() => useRunner(() => (++calls === 1 ? first : second)))
+
+      expect(result.current.busy).toBe(false)
+      await act(async () => {
+        void result.current.run({ kind: 'builtin', algorithmId: 'bubble', input: [2, 1] })
+      })
+      expect(result.current.busy).toBe(true)
+
+      // Supersede + redispatch in one go, as App does: still busy, because the
+      // replacement batch is now outstanding.
+      let fresh: Promise<Awaited<ReturnType<typeof result.current.run>>> | undefined
+      await act(async () => {
+        result.current.supersede()
+        fresh = result.current.run({ kind: 'builtin', algorithmId: 'bubble', input: [3, 1] })
+      })
+      expect(result.current.busy).toBe(true)
+
+      await act(async () => {
+        second.flush()
+        await fresh
+      })
+      await waitFor(() => expect(result.current.busy).toBe(false))
+
+      // Superseding with nothing to replace it leaves nothing outstanding.
+      await act(async () => {
+        void result.current.run({ kind: 'builtin', algorithmId: 'bubble', input: [4, 1] })
+        result.current.supersede()
+      })
+      await waitFor(() => expect(result.current.busy).toBe(false))
+    })
+  })
+
   describe('watchdog', () => {
     /**
      * A worker that accepts every message and genuinely never replies — the
@@ -195,6 +330,45 @@ describe('useRunner', () => {
         second = await result.current.run({ kind: 'builtin', algorithmId: 'bubble', input: [2, 1] })
       })
       expect(second?.ok).toBe(true)
+    })
+
+    it('reports the limit of each stuck request, not of the first one to fire', async () => {
+      // Two requests are stuck on one wedged worker with different budgets.
+      // The reap is triggered by whichever watchdog fires first, but the
+      // message and `limit` each caller gets back must describe that
+      // caller's own request — quoting the first-firing request's limit for
+      // all of them states a specific wrong number.
+      const worker = hangingWorker()
+      const { result } = renderHook(() => useRunner(() => worker))
+
+      let short: Awaited<ReturnType<typeof result.current.run>> | undefined
+      let long: Awaited<ReturnType<typeof result.current.run>> | undefined
+      await act(async () => {
+        const a = result.current.run({
+          kind: 'custom',
+          source: 'x',
+          input: [2, 1],
+          limits: { maxMillis: 20, maxSteps: 1000 },
+        })
+        const b = result.current.run({
+          kind: 'custom',
+          source: 'x',
+          input: [2, 1],
+          limits: { maxMillis: 300, maxSteps: 1000 },
+        })
+        ;[short, long] = await Promise.all([a, b])
+      })
+
+      expect(short?.ok).toBe(false)
+      expect(long?.ok).toBe(false)
+      if (short && !short.ok) {
+        expect(short.error.limit).toBe(20)
+        expect(short.error.message).toContain('20ms')
+      }
+      if (long && !long.ok) {
+        expect(long.error.limit).toBe(300)
+        expect(long.error.message).toContain('300ms')
+      }
     })
 
     it('does not fire the watchdog for a request that answers normally', async () => {
